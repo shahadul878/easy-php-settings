@@ -68,7 +68,7 @@ class Easy_PHP_Settings {
         if ( false !== $settings ) {
             wp_add_inline_script(
                 'code-editor',
-                sprintf( 'jQuery( function() { wp.codeEditor.initialize( "eps_settings_custom_php_ini", %s ); } );', wp_json_encode( $settings ) )
+                sprintf( 'jQuery( function() { wp.codeEditor.initialize( "easy_php_settings_custom_php_ini", %s ); } );', wp_json_encode( $settings ) )
             );
         }
 
@@ -89,12 +89,12 @@ class Easy_PHP_Settings {
         );
         wp_localize_script(
             'easy-php-settings-admin',
-            'epsSettingsKeys',
+            'easy_php_settingsKeys',
             $this->settings_keys
         );
         wp_localize_script(
             'easy-php-settings-admin',
-            'epsAdminVars',
+            'easy_php_settingsAdminVars',
             array(
                 'copiedText' => esc_html__('Copied to clipboard!', 'easy-php-settings'),
                 'testCompleted' => esc_html__('Settings test completed. Check the Status tab for detailed information.', 'easy-php-settings'),
@@ -129,7 +129,7 @@ class Easy_PHP_Settings {
     }
 
     public function settings_init() {
-        register_setting( 'easy_php_settings', 'eps_settings', [ $this, 'sanitize_callback' ] );
+        register_setting( 'easy_php_settings', 'easy_php_settings_settings', [ $this, 'sanitize_callback' ] );
 
         // Apply settings
         $this->apply_settings();
@@ -181,14 +181,14 @@ class Easy_PHP_Settings {
                     __('Settings saved and written to: %s. Please restart your web server for changes to take effect.', 'easy-php-settings'),
                 implode(', ', $files_written)
             );
-            add_settings_error( 'eps_settings', 'config_files_created', $message, 'updated' );
+            add_settings_error( 'easy_php_settings_settings', 'config_files_created', $message, 'updated' );
         } else {
-            add_settings_error( 'eps_settings', 'config_files_error', __( 'Settings saved, but could not write to INI files. Please check file permissions.', 'easy-php-settings' ), 'warning' );
+            add_settings_error( 'easy_php_settings_settings', 'config_files_error', __( 'Settings saved, but could not write to INI files. Please check file permissions.', 'easy-php-settings' ), 'warning' );
         }
     }
 
     public function handle_ini_file_actions() {
-        if ( isset( $_POST['eps_delete_ini_files'] ) && check_admin_referer( 'eps_delete_ini_nonce' ) ) {
+        if ( isset( $_POST['easy_php_settings_delete_ini_files'] ) && check_admin_referer( 'easy_php_settings_delete_ini_nonce' ) ) {
              if ( ! current_user_can( $this->get_capability() ) ) {
                 return;
             }
@@ -202,15 +202,15 @@ class Easy_PHP_Settings {
                     __('Successfully deleted: %s.', 'easy-php-settings'),
                     implode(', ', $files_deleted)
                 );
-                add_settings_error( 'eps_settings', 'files_deleted_success', $message, 'success' );
+                add_settings_error( 'easy_php_settings_settings', 'files_deleted_success', $message, 'success' );
             } else {
-                add_settings_error( 'eps_settings', 'files_deleted_error', __( 'Could not delete INI files. They may not exist or have permission issues.', 'easy-php-settings' ), 'warning' );
+                add_settings_error( 'easy_php_settings_settings', 'files_deleted_error', __( 'Could not delete INI files. They may not exist or have permission issues.', 'easy-php-settings' ), 'warning' );
             }
         }
     }
 
     public function render_setting_field( $args ) {
-        $options = $this->get_option( 'eps_settings' );
+        $options = $this->get_option( 'easy_php_settings_settings' );
         $key = $args['key'];
         $value = isset( $options[ $key ] ) ? $options[ $key ] : '';
         $current_value = ini_get( $key );
@@ -220,7 +220,7 @@ class Easy_PHP_Settings {
         $access = $all_settings[$key]['access'] ?? 0;
         $is_changeable = ( $access === INI_USER || $access === INI_ALL );
 
-        echo "<input type='text' name='eps_settings[" . esc_attr($key) . "]' value='" . esc_attr( $value ) . "' class='regular-text' placeholder='" . esc_attr( $this->recommended_values[$key] ?? '' ) . "'>";
+        echo "<input type='text' name='easy_php_settings_settings[" . esc_attr($key) . "]' value='" . esc_attr( $value ) . "' class='regular-text' placeholder='" . esc_attr( $this->recommended_values[$key] ?? '' ) . "'>";
         
         $this->render_status_indicator($key, $current_value);
 
@@ -298,7 +298,7 @@ class Easy_PHP_Settings {
     }
 
     public function apply_settings() {
-        $options = $this->get_option( 'eps_settings' );
+        $options = $this->get_option( 'easy_php_settings_settings' );
         if ( ! empty( $options ) && is_array( $options ) ) {
             $all_settings = ini_get_all();
             foreach ( $options as $key => $value ) {
@@ -347,11 +347,11 @@ class Easy_PHP_Settings {
 
 		$active_tab = 'general_settings';
 		$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_key( wp_unslash( $_GET['_wpnonce'] ) ) : null;
-		if ( isset( $_GET['tab'] ) && wp_verify_nonce( $nonce, 'eps_tab_nonce' ) ) {
+		if ( isset( $_GET['tab'] ) && wp_verify_nonce( $nonce, 'easy_php_settings_tab_nonce' ) ) {
 			$active_tab = sanitize_key( wp_unslash( $_GET['tab'] ) );
 		}
 		
-		$tab_nonce_url = wp_create_nonce( 'eps_tab_nonce' );
+		$tab_nonce_url = wp_create_nonce( 'easy_php_settings_tab_nonce' );
         ?>
         <div class="wrap">
             <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
@@ -369,11 +369,11 @@ class Easy_PHP_Settings {
             <form action="options.php" method="post">
                 <?php
                 settings_fields( 'easy_php_settings' );
-                $options = $this->get_option( 'eps_settings' );
+                $options = $this->get_option( 'easy_php_settings_settings' );
                 ?>
                 <div style="margin-bottom: 20px;">
-                    <label for="eps_settings_custom_php_ini"><strong><?php esc_html_e('Custom php.ini Configuration', 'easy-php-settings'); ?></strong></label>
-                    <textarea name="eps_settings[custom_php_ini]" id="eps_settings_custom_php_ini" rows="8" style="width:100%;font-family:monospace;" placeholder="; Example: \nmax_file_uploads = 50\nshort_open_tag = Off\n"><?php echo isset($options['custom_php_ini']) ? esc_textarea($options['custom_php_ini']) : ''; ?></textarea>
+                    <label for="easy_php_settings_custom_php_ini"><strong><?php esc_html_e('Custom php.ini Configuration', 'easy-php-settings'); ?></strong></label>
+                    <textarea name="easy_php_settings_settings[custom_php_ini]" id="easy_php_settings_custom_php_ini" rows="8" style="width:100%;font-family:monospace;" placeholder="; Example: \nmax_file_uploads = 50\nshort_open_tag = Off\n"><?php echo isset($options['custom_php_ini']) ? esc_textarea($options['custom_php_ini']) : ''; ?></textarea>
                     <p class="description"><?php esc_html_e('Add any custom php.ini directives here. These will be appended to the generated .user.ini and php.ini files.', 'easy-php-settings'); ?></p>
                 </div>
                 <?php
@@ -383,8 +383,8 @@ class Easy_PHP_Settings {
             </form>
 
             <form action="" method="post" style="margin-top: 20px;">
-                <?php wp_nonce_field( 'eps_delete_ini_nonce' ); ?>
-                <button type="submit" name="eps_delete_ini_files" class="button button-danger" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to delete the .user.ini and php.ini files created by this plugin?', 'easy-php-settings' ) ); ?>');">
+                <?php wp_nonce_field( 'easy_php_settings_delete_ini_nonce' ); ?>
+                <button type="submit" name="easy_php_settings_delete_ini_files" class="button button-danger" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to delete the .user.ini and php.ini files created by this plugin?', 'easy-php-settings' ) ); ?>');">
                     <?php esc_html_e( 'Delete .ini Files', 'easy-php-settings' ); ?>
                 </button>
                  <p class="description"><?php esc_html_e('This will remove the .user.ini and php.ini files from your WordPress root directory.', 'easy-php-settings'); ?></p>
@@ -541,11 +541,11 @@ class Easy_PHP_Settings {
             ?>
             
             <form method="post" style="margin-bottom: 15px;">
-                <?php wp_nonce_field( 'eps_clear_log_nonce' ); ?>
-                <input type="submit" name="eps_clear_log" class="button button-danger" value="<?php esc_attr_e( 'Clear Log File', 'easy-php-settings' ); ?>" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to permanently delete the debug log?', 'easy-php-settings' ) ); ?>');">
+                <?php wp_nonce_field( 'easy_php_settings_clear_log_nonce' ); ?>
+                <input type="submit" name="easy_php_settings_clear_log" class="button button-danger" value="<?php esc_attr_e( 'Clear Log File', 'easy-php-settings' ); ?>" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to permanently delete the debug log?', 'easy-php-settings' ) ); ?>');">
             </form>
 
-            <textarea id="eps-log-viewer" style="width: 100%; height: 500px; font-family: monospace;"><?php echo esc_textarea( $log_content ); ?></textarea>
+            <textarea id="easy_php_settings-log-viewer" style="width: 100%; height: 500px; font-family: monospace;"><?php echo esc_textarea( $log_content ); ?></textarea>
         </div>
         <?php
     }
@@ -626,10 +626,10 @@ class Easy_PHP_Settings {
     }
 
     public function debugging_settings_init() {
-        register_setting( 'easy_php_settings_debugging', 'eps_debugging_settings', [ $this, 'update_wp_config_constants' ] );
+        register_setting( 'easy_php_settings_debugging', 'easy_php_settings_debugging_settings', [ $this, 'update_wp_config_constants' ] );
 
         add_settings_section(
-            'eps_debugging_section',
+            'easy_php_settings_debugging_section',
             __( 'Debugging Constants', 'easy-php-settings' ),
             function() {
                 echo '<p>' . esc_html__( 'Control WordPress debugging constants defined in wp-config.php.', 'easy-php-settings' ) . '</p>';
@@ -642,7 +642,7 @@ class Easy_PHP_Settings {
             'WP_DEBUG',
             [ $this, 'render_debugging_field' ],
             'easy_php_settings_debugging',
-            'eps_debugging_section',
+            'easy_php_settings_debugging_section',
             [ 'name' => 'wp_debug' ]
         );
         add_settings_field(
@@ -650,7 +650,7 @@ class Easy_PHP_Settings {
             'WP_DEBUG_LOG',
             [ $this, 'render_debugging_field' ],
             'easy_php_settings_debugging',
-            'eps_debugging_section',
+            'easy_php_settings_debugging_section',
             [ 'name' => 'wp_debug_log' ]
         );
         add_settings_field(
@@ -658,7 +658,7 @@ class Easy_PHP_Settings {
             'WP_DEBUG_DISPLAY',
             [ $this, 'render_debugging_field' ],
             'easy_php_settings_debugging',
-            'eps_debugging_section',
+            'easy_php_settings_debugging_section',
             [ 'name' => 'wp_debug_display' ]
         );
         add_settings_field(
@@ -666,7 +666,7 @@ class Easy_PHP_Settings {
             'SCRIPT_DEBUG',
             [ $this, 'render_debugging_field' ],
             'easy_php_settings_debugging',
-            'eps_debugging_section',
+            'easy_php_settings_debugging_section',
             [ 'name' => 'script_debug' ]
         );
     }
@@ -681,7 +681,7 @@ class Easy_PHP_Settings {
         $is_disabled = ($name !== 'wp_debug' && !$this->is_constant_defined('WP_DEBUG'));
         
         $html = '<label class="switch">';
-        $html .= '<input type="checkbox" name="eps_debugging_settings[' . esc_attr($name) . ']" value="1" ' . checked(1, $is_defined, false) . ' ' . disabled($is_disabled, true, false) . '>';
+        $html .= '<input type="checkbox" name="easy_php_settings_debugging_settings[' . esc_attr($name) . ']" value="1" ' . checked(1, $is_defined, false) . ' ' . disabled($is_disabled, true, false) . '>';
         $html .= '<span class="slider round"></span>';
         $html .= '</label>';
         
@@ -704,14 +704,14 @@ class Easy_PHP_Settings {
 
         $config_path = ABSPATH . 'wp-config.php';
         if ( !$wp_filesystem->is_writable($config_path) ) {
-            add_settings_error('eps_debugging_settings', 'config_not_writable', __('wp-config.php is not writable.', 'easy-php-settings'), 'error');
-            return get_option('eps_debugging_settings');
+            add_settings_error('easy_php_settings_debugging_settings', 'config_not_writable', __('wp-config.php is not writable.', 'easy-php-settings'), 'error');
+            return get_option('easy_php_settings_debugging_settings');
         }
 
         $config_content = $wp_filesystem->get_contents($config_path);
         $constants = ['WP_DEBUG', 'WP_DEBUG_LOG', 'WP_DEBUG_DISPLAY', 'SCRIPT_DEBUG'];
         
-        $new_options = get_option('eps_debugging_settings', []);
+        $new_options = get_option('easy_php_settings_debugging_settings', []);
         
         foreach($constants as $const) {
             $key = strtolower($const);
@@ -728,14 +728,14 @@ class Easy_PHP_Settings {
         
         $wp_filesystem->put_contents($config_path, $config_content);
 
-        add_settings_error('eps_debugging_settings', 'settings_updated', __('Debugging settings updated successfully.', 'easy-php-settings'), 'updated');
+        add_settings_error('easy_php_settings_debugging_settings', 'settings_updated', __('Debugging settings updated successfully.', 'easy-php-settings'), 'updated');
         
         return $new_options;
     }
 
     public function handle_log_actions() {
-        if ( isset( $_POST['eps_clear_log'] ) ) {
-            check_admin_referer( 'eps_clear_log_nonce' );
+        if ( isset( $_POST['easy_php_settings_clear_log'] ) ) {
+            check_admin_referer( 'easy_php_settings_clear_log_nonce' );
 
             if ( ! current_user_can( $this->get_capability() ) ) {
                 return;
@@ -751,9 +751,9 @@ class Easy_PHP_Settings {
 
             if ( $wp_filesystem->exists( $log_file ) && $wp_filesystem->is_writable( $log_file ) ) {
                 $wp_filesystem->put_contents( $log_file, '' );
-                add_settings_error( 'eps_settings', 'log_cleared', __( 'Debug log file cleared successfully.', 'easy-php-settings' ), 'updated' );
+                add_settings_error( 'easy_php_settings_settings', 'log_cleared', __( 'Debug log file cleared successfully.', 'easy-php-settings' ), 'updated' );
             } else {
-                add_settings_error( 'eps_settings', 'log_clear_error', __( 'Could not clear debug log file. Check file permissions.', 'easy-php-settings' ), 'error' );
+                add_settings_error( 'easy_php_settings_settings', 'log_clear_error', __( 'Could not clear debug log file. Check file permissions.', 'easy-php-settings' ), 'error' );
             }
         }
     }

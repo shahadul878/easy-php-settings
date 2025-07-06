@@ -2,9 +2,9 @@ jQuery(document).ready(function($) {
     // Configuration Generator
     $('#generate-config').on('click', function() {
         var settings = {};
-        if (window.epsSettingsKeys && Array.isArray(window.epsSettingsKeys)) {
-            window.epsSettingsKeys.forEach(function(key) {
-                var input = $('input[name="eps_settings[' + key + ']"]');
+        if (window.easy_php_settingsKeys && Array.isArray(window.easy_php_settingsKeys)) {
+            window.easy_php_settingsKeys.forEach(function(key) {
+                var input = $('input[name="easy_php_settings_settings[' + key + ']"]');
                 if (input.length && input.val()) {
                     settings[key] = input.val();
                 }
@@ -17,7 +17,7 @@ jQuery(document).ready(function($) {
             userIniContent += key + ' = ' + settings[key] + '\n';
         });
         // Add custom php.ini config if present
-        var customIni = $('#eps_settings_custom_php_ini');
+        var customIni = $('#easy_php_settings_custom_php_ini');
         if (customIni.length && customIni.val().trim()) {
             userIniContent += '\n; Custom php.ini directives\n' + customIni.val().trim() + '\n';
         }
@@ -43,7 +43,7 @@ jQuery(document).ready(function($) {
         if (!textarea) return;
         textarea.select();
         document.execCommand('copy');
-        alert(epsAdminVars.copiedText);
+        alert(easy_php_settingsAdminVars.copiedText);
     };
 
     // Test Settings
@@ -51,7 +51,7 @@ jQuery(document).ready(function($) {
         var results = $('#test-results');
         results.html('<p>Testing settings...</p>');
         setTimeout(function() {
-            results.html('<p style="color: green;">✓ ' + epsAdminVars.testCompleted + '</p>');
+            results.html('<p style="color: green;">✓ ' + easy_php_settingsAdminVars.testCompleted + '</p>');
         }, 1000);
     });
 }); 

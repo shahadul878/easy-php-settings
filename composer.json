@@ -1,0 +1,35 @@
+{
+  "name": "Easy-PHP-Settings",
+  "license": "GPL-3.0-or-later",
+  "authors": [
+    {
+      "name": "ThemeOO",
+      "email": "contact@themeoo.com"
+    }
+  ],
+  "minimum-stability": "stable",
+  "require-dev": {
+    "phpcompatibility/php-compatibility": "*",
+    "phpstan/phpstan": "^1.9",
+    "szepeviktor/phpstan-wordpress": "^1.1",
+    "phpstan/extension-installer": "^1.2",
+    "php-stubs/woocommerce-stubs": "^7.1",
+    "php-stubs/wordpress-stubs": "^6.1",
+    "squizlabs/php_codesniffer": "*",
+    "dealerdirect/phpcodesniffer-composer-installer": "^0.7.2",
+    "phpcompatibility/phpcompatibility-wp": "*",
+    "automattic/vipwpcs": "^2.3"
+  },
+  "scripts": {
+    "phpcs": "@php ./vendor/bin/phpcs --standard=phpcs.xml --colors --extensions=php .",
+    "phpcs:log": "@php ./vendor/bin/phpcs --standard=phpcs.xml --colors --extensions=php --report-file=./logs/phpcs.log .",
+    "phpcbf": "@php ./vendor/bin/phpcbf --standard=phpcs.xml --colors --extensions=php .",
+    "analyze": "@php ./vendor/bin/phpstan analyze ."
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true,
+      "phpstan/extension-installer": true
+    }
+  }
+}
