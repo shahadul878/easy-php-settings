@@ -1,0 +1,339 @@
+# Copyright (C) 2025 H M Shahadul Islam
+# This file is distributed under the GPL-2.0+.
+msgid ""
+msgstr ""
+"Project-Id-Version: Easy PHP Settings 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/easy-php-settings\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2025-07-06T16:09:59+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: easy-php-settings\n"
+
+#. Plugin Name of the plugin
+#: easy-php-settings.php
+#: easy-php-settings.php:127
+msgid "Easy PHP Settings"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: easy-php-settings.php
+msgid "https://github.com/easy-php-settings"
+msgstr ""
+
+#. Description of the plugin
+#: easy-php-settings.php
+msgid "An easy way to manage common PHP INI settings from the WordPress admin panel."
+msgstr ""
+
+#. Author of the plugin
+#: easy-php-settings.php
+msgid "H M Shahadul Islam"
+msgstr ""
+
+#. Author URI of the plugin
+#: easy-php-settings.php
+msgid "https://github.com/shahadul878"
+msgstr ""
+
+#: easy-php-settings.php:102
+#: easy-php-settings.php:502
+msgid "Copied to clipboard!"
+msgstr ""
+
+#: easy-php-settings.php:103
+msgid "Settings test completed. Check the Status tab for detailed information."
+msgstr ""
+
+#: easy-php-settings.php:126
+msgid "PHP Settings Manager"
+msgstr ""
+
+#. translators: %s: List of written INI file names.
+#: easy-php-settings.php:184
+#, php-format
+msgid "Settings saved and written to: %s. Please restart your web server for changes to take effect."
+msgstr ""
+
+#: easy-php-settings.php:189
+msgid "Settings saved, but could not write to INI files. Please check file permissions."
+msgstr ""
+
+#. translators: %s: List of deleted INI file names.
+#: easy-php-settings.php:205
+#, php-format
+msgid "Successfully deleted: %s."
+msgstr ""
+
+#: easy-php-settings.php:210
+msgid "Could not delete INI files. They may not exist or have permission issues."
+msgstr ""
+
+#: easy-php-settings.php:231
+msgid "⚠ This setting cannot be changed at runtime. Use the configuration generator below."
+msgstr ""
+
+#. translators: %s: Current PHP value
+#: easy-php-settings.php:238
+#, php-format
+msgid "Current value: %s"
+msgstr ""
+
+#. translators: %s: Recommended PHP value
+#: easy-php-settings.php:242
+#, php-format
+msgid " | Recommended: %s"
+msgstr ""
+
+#: easy-php-settings.php:249
+msgid "(Low)"
+msgstr ""
+
+#: easy-php-settings.php:251
+msgid "(OK)"
+msgstr ""
+
+#: easy-php-settings.php:274
+msgid "Manual Configuration Required"
+msgstr ""
+
+#: easy-php-settings.php:275
+msgid "This setting requires server-level configuration. Choose one of the following methods:"
+msgstr ""
+
+#: easy-php-settings.php:280
+msgid "Method 1: .htaccess file"
+msgstr ""
+
+#: easy-php-settings.php:287
+msgid "Method 2: .user.ini file"
+msgstr ""
+
+#: easy-php-settings.php:293
+msgid "Method 3: php.ini file"
+msgstr ""
+
+#: easy-php-settings.php:297
+msgid "Note: After making changes, restart your web server or contact your hosting provider."
+msgstr ""
+
+#. translators: %s: Name of the PHP setting
+#: easy-php-settings.php:323
+#, php-format
+msgid "Could not set %s. The setting might be disabled by your hosting provider."
+msgstr ""
+
+#. translators: 1: Name of the PHP setting, 2: Old value, 3: New value
+#: easy-php-settings.php:334
+#, php-format
+msgid "Successfully changed %1$s from %2$s to %3$s."
+msgstr ""
+
+#: easy-php-settings.php:364
+msgid "General Settings"
+msgstr ""
+
+#: easy-php-settings.php:365
+msgid "Debugging"
+msgstr ""
+
+#: easy-php-settings.php:366
+msgid "PHP Settings"
+msgstr ""
+
+#: easy-php-settings.php:367
+msgid "Status"
+msgstr ""
+
+#: easy-php-settings.php:368
+msgid "Log Viewer"
+msgstr ""
+
+#: easy-php-settings.php:378
+msgid "Custom php.ini Configuration"
+msgstr ""
+
+#: easy-php-settings.php:380
+msgid "Add any custom php.ini directives here. These will be appended to the generated .user.ini and php.ini files."
+msgstr ""
+
+#: easy-php-settings.php:390
+msgid "Are you sure you want to delete the .user.ini and php.ini files created by this plugin?"
+msgstr ""
+
+#: easy-php-settings.php:391
+msgid "Delete .ini Files"
+msgstr ""
+
+#: easy-php-settings.php:393
+msgid "This will remove the .user.ini and php.ini files from your WordPress root directory."
+msgstr ""
+
+#: easy-php-settings.php:397
+msgid "Configuration Generator"
+msgstr ""
+
+#: easy-php-settings.php:398
+msgid "Generate server configuration files with your custom values:"
+msgstr ""
+
+#: easy-php-settings.php:399
+msgid "Generate Configuration Files"
+msgstr ""
+
+#: easy-php-settings.php:402
+msgid "Generated Configuration Files:"
+msgstr ""
+
+#: easy-php-settings.php:405
+msgid ".user.ini file:"
+msgstr ""
+
+#: easy-php-settings.php:407
+msgid "Copy to Clipboard"
+msgstr ""
+
+#: easy-php-settings.php:411
+msgid "Instructions:"
+msgstr ""
+
+#: easy-php-settings.php:413
+msgid "Copy the .user.ini content and save it as \".user.ini\" in your WordPress root directory"
+msgstr ""
+
+#: easy-php-settings.php:414
+msgid "Or copy the .htaccess content and add it to your existing .htaccess file"
+msgstr ""
+
+#: easy-php-settings.php:415
+msgid "Restart your web server or contact your hosting provider"
+msgstr ""
+
+#: easy-php-settings.php:422
+#: easy-php-settings.php:424
+msgid "Test Settings"
+msgstr ""
+
+#: easy-php-settings.php:423
+msgid "Click the button below to test if your current settings can be modified at runtime:"
+msgstr ""
+
+#: easy-php-settings.php:432
+msgid "Save Debugging Settings"
+msgstr ""
+
+#: easy-php-settings.php:441
+msgid "PHP Settings Table"
+msgstr ""
+
+#: easy-php-settings.php:443
+msgid "Search for directives..."
+msgstr ""
+
+#: easy-php-settings.php:444
+msgid "Copy Selected"
+msgstr ""
+
+#: easy-php-settings.php:451
+msgid "PHPInfo class not found."
+msgstr ""
+
+#: easy-php-settings.php:455
+msgid "Tip: Use the search box to filter settings. Select rows and click \"Copy Selected\" to copy them to your clipboard."
+msgstr ""
+
+#: easy-php-settings.php:504
+msgid "No rows selected."
+msgstr ""
+
+#: easy-php-settings.php:523
+msgid "Debug Log Viewer"
+msgstr ""
+
+#: easy-php-settings.php:528
+msgid "WP_DEBUG_LOG is not enabled. To use the log viewer, please enable it from the Debugging tab."
+msgstr ""
+
+#: easy-php-settings.php:539
+msgid "The debug log file is empty."
+msgstr ""
+
+#: easy-php-settings.php:542
+msgid "The debug log file does not exist. It will be created when errors are logged."
+msgstr ""
+
+#: easy-php-settings.php:548
+msgid "Clear Log File"
+msgstr ""
+
+#: easy-php-settings.php:548
+msgid "Are you sure you want to permanently delete the debug log?"
+msgstr ""
+
+#: easy-php-settings.php:577
+msgid "PHP Configuration Status"
+msgstr ""
+
+#: easy-php-settings.php:581
+msgid "Setting"
+msgstr ""
+
+#: easy-php-settings.php:582
+msgid "Current Value"
+msgstr ""
+
+#: easy-php-settings.php:583
+msgid "Recommended"
+msgstr ""
+
+#: easy-php-settings.php:584
+msgid "Changeable"
+msgstr ""
+
+#: easy-php-settings.php:600
+msgid "Yes"
+msgstr ""
+
+#: easy-php-settings.php:602
+msgid "No"
+msgstr ""
+
+#: easy-php-settings.php:610
+msgid "Server Status"
+msgstr ""
+
+#: easy-php-settings.php:614
+msgid "Metric"
+msgstr ""
+
+#: easy-php-settings.php:615
+msgid "Value"
+msgstr ""
+
+#: easy-php-settings.php:636
+msgid "Debugging Constants"
+msgstr ""
+
+#: easy-php-settings.php:638
+msgid "Control WordPress debugging constants defined in wp-config.php."
+msgstr ""
+
+#: easy-php-settings.php:710
+msgid "wp-config.php is not writable."
+msgstr ""
+
+#: easy-php-settings.php:734
+msgid "Debugging settings updated successfully."
+msgstr ""
+
+#: easy-php-settings.php:757
+msgid "Debug log file cleared successfully."
+msgstr ""
+
+#: easy-php-settings.php:759
+msgid "Could not clear debug log file. Check file permissions."
+msgstr ""
