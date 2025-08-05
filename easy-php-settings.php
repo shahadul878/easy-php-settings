@@ -46,7 +46,6 @@ class Easy_PHP_Settings {
     private $version = '1.0.1';
 
     public function __construct() {
-        add_action( 'plugins_loaded', [ $this, 'load_textdomain' ] );
         $hook = is_multisite() ? 'network_admin_menu' : 'admin_menu';
         add_action( $hook, [ $this, 'add_admin_menu' ] );
         add_action( 'admin_init', [ $this, 'settings_init' ] );
