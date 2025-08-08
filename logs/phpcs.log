@@ -1,37 +1,22 @@
 
 FILE: /home/shahadul/Local Sites/plugin-dev/app/public/wp-content/plugins/easy-php-settings/class-easy-php-settings.php
 ----------------------------------------------------------------------------------------------------------------------------------------------------
-FOUND 0 ERRORS AND 3 WARNINGS AFFECTING 2 LINES
+FOUND 0 ERRORS AND 2 WARNINGS AFFECTING 1 LINE
 ----------------------------------------------------------------------------------------------------------------------------------------------------
- 155 | WARNING | It is recommended not to use reserved keyword "default" as function parameter name. Found: $default
-     |         | (Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound)
- 435 | WARNING | Silencing errors is strongly discouraged. Use proper error checking instead. Found: @ini_set( $key,...
+ 436 | WARNING | Silencing errors is strongly discouraged. Use proper error checking instead. Found: @ini_set( $key,...
      |         | (WordPress.PHP.NoSilencedErrors.Discouraged)
- 435 | WARNING | Changing configuration values at runtime is strongly discouraged. Found: ini_set($key, $value) (WordPress.PHP.IniSet.Risky)
+ 436 | WARNING | Changing configuration values at runtime is strongly discouraged. Found: ini_set($key, $value) (WordPress.PHP.IniSet.Risky)
 ----------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 FILE: /home/shahadul/Local Sites/plugin-dev/app/public/wp-content/plugins/easy-php-settings/includes/class-easyphpinfo.php
 ----------------------------------------------------------------------------------------------------------------------------------------------------
-FOUND 1 ERROR AND 2 WARNINGS AFFECTING 2 LINES
+FOUND 0 ERRORS AND 2 WARNINGS AFFECTING 1 LINE
 ----------------------------------------------------------------------------------------------------------------------------------------------------
- 102 | WARNING | [ ] Silencing errors is strongly discouraged. Use proper error checking instead. Found: @$m[2] ...
-     |         |     (WordPress.PHP.NoSilencedErrors.Discouraged)
- 102 | WARNING | [ ] Silencing errors is strongly discouraged. Use proper error checking instead. Found: @$m[2] ...
-     |         |     (WordPress.PHP.NoSilencedErrors.Discouraged)
- 124 | ERROR   | [x] Expected 1 newline at end of file; 0 found (PSR2.Files.EndFileNewline.NoneFound)
+ 103 | WARNING | Silencing errors is strongly discouraged. Use proper error checking instead. Found: @$m[2] ...
+     |         | (WordPress.PHP.NoSilencedErrors.Discouraged)
+ 103 | WARNING | Silencing errors is strongly discouraged. Use proper error checking instead. Found: @$m[2] ...
+     |         | (WordPress.PHP.NoSilencedErrors.Discouraged)
 ----------------------------------------------------------------------------------------------------------------------------------------------------
-PHPCBF CAN FIX THE 1 MARKED SNIFF VIOLATIONS AUTOMATICALLY
-----------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-FILE: /home/shahadul/Local Sites/plugin-dev/app/public/wp-content/plugins/easy-php-settings/includes/class-easyinifile.php
---------------------------------------------------------------------------------------------------------------------------
-FOUND 1 ERROR AFFECTING 1 LINE
---------------------------------------------------------------------------------------------------------------------------
- 107 | ERROR | [x] Expected 1 newline at end of file; 0 found (PSR2.Files.EndFileNewline.NoneFound)
---------------------------------------------------------------------------------------------------------------------------
-PHPCBF CAN FIX THE 1 MARKED SNIFF VIOLATIONS AUTOMATICALLY
---------------------------------------------------------------------------------------------------------------------------
 
 

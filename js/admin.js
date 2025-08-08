@@ -54,4 +54,57 @@ jQuery(document).ready(function($) {
             results.html('<p style="color: green;">✓ ' + easy_php_settingsAdminVars.testCompleted + '</p>');
         }, 1000);
     });
+
+    // PHP Settings Search and Copy functionality
+    (function(){
+        // Search filter
+        var searchInput = document.getElementById('php-settings-search');
+        var table = document.getElementById('phpinfo-table');
+        if (searchInput && table) {
+            searchInput.addEventListener('input', function() {
+                var filter = this.value.toLowerCase();
+                var rows = table.getElementsByTagName('tr');
+                for (var i = 1; i < rows.length; i++) { // skip header
+                    var cells = rows[i].getElementsByTagName('td');
+                    var match = false;
+                    for (var j = 0; j < cells.length; j++) {
+                        if (cells[j].textContent.toLowerCase().indexOf(filter) > -1) {
+                            match = true;
+                            break;
+                        }
+                    }
+                    rows[i].style.display = match ? '' : 'none';
+                }
+            });
+        }
+        // Copy selected
+        var copyBtn = document.getElementById('php-settings-copy-selected');
+        if (copyBtn && table) {
+            copyBtn.addEventListener('click', function() {
+                var rows = table.querySelectorAll('tbody tr');
+                var output = '';
+                rows.forEach(function(row) {
+                    var checkbox = row.querySelector('input[type="checkbox"]');
+                    if (checkbox && checkbox.checked) {
+                        var key = row.querySelector('.value')?.closest('td')?.previousElementSibling?.textContent?.trim() || '';
+                        var value = row.querySelector('.value')?.textContent?.trim() || '';
+                        if (key && value) {
+                            output += key + ' = ' + value + '\n';
+                        }
+                    }
+                });
+                if (output) {
+                    var temp = document.createElement('textarea');
+                    temp.value = output;
+                    document.body.appendChild(temp);
+                    temp.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(temp);
+                    alert(easy_php_settingsAdminVars.copiedText);
+                } else {
+                    alert(easy_php_settingsAdminVars.noRowsSelected || 'No rows selected.');
+                }
+            });
+        }
+    })();
 }); 

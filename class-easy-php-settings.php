@@ -3,7 +3,7 @@
  * Plugin Name: Easy PHP Settings
  * Plugin URI:  https://github.com/easy-php-settings
  * Description: An easy way to manage common PHP INI settings from the WordPress admin panel.
- * Version:     1.0.1
+ * Version:     1.0.2
  * Author:      H M Shahadul Islam
  * Author URI:  https://github.com/shahadul878
  * License:     GPL-2.0+
@@ -61,7 +61,7 @@ class Easy_PHP_Settings {
 	 *
 	 * @var string
 	 */
-	private $version = '1.0.1';
+	private $version = '1.0.2';
 
 	/**
 	 *  Initializes plugin settings.
@@ -74,15 +74,6 @@ class Easy_PHP_Settings {
 		add_action( 'admin_init', array( $this, 'debugging_settings_init' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_styles' ) );
 		add_action( 'admin_init', array( $this, 'handle_log_actions' ) );
-	}
-
-	/**
-	 * Load plugin textdomain.
-	 *
-	 * @return void
-	 */
-	public function load_textdomain() {
-		load_plugin_textdomain( 'easy-php-settings', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 	}
 
 	/**
@@ -110,7 +101,7 @@ class Easy_PHP_Settings {
 			'easy-php-settings-styles',
 			plugin_dir_url( __FILE__ ) . 'css/admin-styles.css',
 			array(),
-			'1.0.1'
+			'1.0.2'
 		);
 
 		// Enqueue admin.js and pass settings keys and strings.
@@ -118,7 +109,7 @@ class Easy_PHP_Settings {
 			'easy-php-settings-admin',
 			plugin_dir_url( __FILE__ ) . 'js/admin.js',
 			array( 'jquery' ),
-			'1.0.0',
+			'1.0.2',
 			true
 		);
 		wp_localize_script(
@@ -130,8 +121,9 @@ class Easy_PHP_Settings {
 			'easy-php-settings-admin',
 			'easy_php_settingsAdminVars',
 			array(
-				'copiedText'    => esc_html__( 'Copied to clipboard!', 'easy-php-settings' ),
-				'testCompleted' => esc_html__( 'Settings test completed. Check the Status tab for detailed information.', 'easy-php-settings' ),
+				'copiedText'     => esc_html__( 'Copied to clipboard!', 'easy-php-settings' ),
+				'testCompleted'  => esc_html__( 'Settings test completed. Check the Status tab for detailed information.', 'easy-php-settings' ),
+				'noRowsSelected' => esc_html__( 'No rows selected.', 'easy-php-settings' ),
 			)
 		);
 	}
@@ -149,11 +141,11 @@ class Easy_PHP_Settings {
 	 * Get Option
 	 *
 	 * @param string $key The option key.
-	 * @param mixed  $default The default value.
+	 * @param mixed  $default_value The default value.
 	 * @return false|mixed|null
 	 */
-	public function get_option( $key, $default = false ) {
-		return is_multisite() ? get_site_option( $key, $default ) : get_option( $key, $default );
+	public function get_option( $key, $default_value = false ) {
+		return is_multisite() ? get_site_option( $key, $default_value ) : get_option( $key, $default_value );
 	}
 
 	/**
@@ -587,59 +579,6 @@ class Easy_PHP_Settings {
 					</div>
 					<p style="margin-top: 10px; color: #666;"><em><?php esc_html_e( 'Tip: Use the search box to filter settings. Select rows and click "Copy Selected" to copy them to your clipboard.', 'easy-php-settings' ); ?></em></p>
 				</div>
-				<script>
-				(function(){
-					// Search filter
-					var searchInput = document.getElementById('php-settings-search');
-					var table = document.getElementById('phpinfo-table');
-					if (searchInput && table) {
-						searchInput.addEventListener('input', function() {
-							var filter = this.value.toLowerCase();
-							var rows = table.getElementsByTagName('tr');
-							for (var i = 1; i < rows.length; i++) { // skip header
-								var cells = rows[i].getElementsByTagName('td');
-								var match = false;
-								for (var j = 0; j < cells.length; j++) {
-									if (cells[j].textContent.toLowerCase().indexOf(filter) > -1) {
-										match = true;
-										break;
-									}
-								}
-								rows[i].style.display = match ? '' : 'none';
-							}
-						});
-					}
-					// Copy selected
-					var copyBtn = document.getElementById('php-settings-copy-selected');
-					if (copyBtn && table) {
-						copyBtn.addEventListener('click', function() {
-							var rows = table.querySelectorAll('tbody tr');
-							var output = '';
-							rows.forEach(function(row) {
-								var checkbox = row.querySelector('input[type="checkbox"]');
-								if (checkbox && checkbox.checked) {
-									var key = row.querySelector('.value')?.closest('td')?.previousElementSibling?.textContent?.trim() || '';
-									var value = row.querySelector('.value')?.textContent?.trim() || '';
-									if (key && value) {
-										output += key + ' = ' + value + '\n';
-									}
-								}
-							});
-							if (output) {
-								var temp = document.createElement('textarea');
-								temp.value = output;
-								document.body.appendChild(temp);
-								temp.select();
-								document.execCommand('copy');
-								document.body.removeChild(temp);
-								alert('<?php esc_html_e( 'Copied to clipboard!', 'easy-php-settings' ); ?>');
-							} else {
-								alert('<?php esc_html_e( 'No rows selected.', 'easy-php-settings' ); ?>');
-							}
-						});
-					}
-				})();
-				</script>
 			<?php endif; ?>
 		</div>
 		<?php

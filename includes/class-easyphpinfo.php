@@ -98,6 +98,7 @@ class EasyPHPInfo {
 					$askapache,
 					PREG_SET_ORDER
 				);
+				// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 				foreach ( $askapache as $m ) {
 					$pi[ $n ][ $m[1] ] = ( ! isset( $m[3] ) || @$m[2] === $m[3] ) ? @$m[2] : array_slice( $m, 2 );
 				}
