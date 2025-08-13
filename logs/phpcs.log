@@ -1,22 +1,23 @@
 
 FILE: /home/shahadul/Local Sites/plugin-dev/app/public/wp-content/plugins/easy-php-settings/class-easy-php-settings.php
-----------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------
 FOUND 0 ERRORS AND 2 WARNINGS AFFECTING 1 LINE
-----------------------------------------------------------------------------------------------------------------------------------------------------
- 436 | WARNING | Silencing errors is strongly discouraged. Use proper error checking instead. Found: @ini_set( $key,...
+-------------------------------------------------------------------------------------------------------------------------------------
+ 532 | WARNING | Silencing errors is strongly discouraged. Use proper error checking instead. Found: @ini_set( $key,...
      |         | (WordPress.PHP.NoSilencedErrors.Discouraged)
- 436 | WARNING | Changing configuration values at runtime is strongly discouraged. Found: ini_set($key, $value) (WordPress.PHP.IniSet.Risky)
-----------------------------------------------------------------------------------------------------------------------------------------------------
+ 532 | WARNING | Changing configuration values at runtime is strongly discouraged. Found: ini_set($key, $value)
+     |         | (WordPress.PHP.IniSet.Risky)
+-------------------------------------------------------------------------------------------------------------------------------------
 
 
 FILE: /home/shahadul/Local Sites/plugin-dev/app/public/wp-content/plugins/easy-php-settings/includes/class-easyphpinfo.php
-----------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------
 FOUND 0 ERRORS AND 2 WARNINGS AFFECTING 1 LINE
-----------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------
  103 | WARNING | Silencing errors is strongly discouraged. Use proper error checking instead. Found: @$m[2] ...
      |         | (WordPress.PHP.NoSilencedErrors.Discouraged)
  103 | WARNING | Silencing errors is strongly discouraged. Use proper error checking instead. Found: @$m[2] ...
      |         | (WordPress.PHP.NoSilencedErrors.Discouraged)
-----------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------
 
 

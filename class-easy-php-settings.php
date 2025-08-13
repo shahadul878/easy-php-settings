@@ -44,6 +44,16 @@ class Easy_PHP_Settings {
 	);
 
 	/**
+	 * WordPress Memory Settings Keys
+	 *
+	 * @var string[] $wp_memory_settings_keys .
+	 */
+	private $wp_memory_settings_keys = array(
+		'wp_memory_limit',
+		'wp_max_memory_limit',
+	);
+
+	/**
 	 * Settings Recommended Value
 	 *
 	 * @var string[] $recommended_values
@@ -54,6 +64,16 @@ class Easy_PHP_Settings {
 		'post_max_size'       => '256M',
 		'max_execution_time'  => '300',
 		'max_input_vars'      => '10000',
+	);
+
+	/**
+	 * WordPress Memory Settings Recommended Values
+	 *
+	 * @var string[] $wp_memory_recommended_values
+	 */
+	private $wp_memory_recommended_values = array(
+		'wp_memory_limit'     => '256M',
+		'wp_max_memory_limit' => '512M',
 	);
 
 	/**
@@ -191,6 +211,7 @@ class Easy_PHP_Settings {
 	 */
 	public function settings_init() {
 		register_setting( 'easy_php_settings', 'easy_php_settings_settings', array( $this, 'sanitize_callback' ) );
+		register_setting( 'easy_php_settings', 'easy_php_settings_wp_memory_settings', array( $this, 'sanitize_wp_memory_callback' ) );
 
 		// Apply settings.
 		$this->apply_settings();
@@ -216,6 +237,26 @@ class Easy_PHP_Settings {
 		// Auto-generate configuration files when settings are saved.
 		if ( ! empty( $new_input ) ) {
 			$this->generate_config_files( $new_input );
+		}
+		return $new_input;
+	}
+
+	/**
+	 * Sanitize callback for WordPress memory settings.
+	 *
+	 * @param array $input The input array to sanitize.
+	 * @return array The sanitized input array.
+	 */
+	public function sanitize_wp_memory_callback( $input ) {
+		$new_input = array();
+		foreach ( $this->wp_memory_settings_keys as $key ) {
+			if ( isset( $input[ $key ] ) ) {
+				$new_input[ $key ] = sanitize_text_field( $input[ $key ] );
+			}
+		}
+		// Update wp-config.php with WordPress memory settings.
+		if ( ! empty( $new_input ) ) {
+			$this->update_wp_memory_constants( $new_input );
 		}
 		return $new_input;
 	}
@@ -314,6 +355,25 @@ class Easy_PHP_Settings {
 		}
 	}
 
+
+
+	/**
+	 * Render WordPress memory setting field.
+	 *
+	 * @param array $args The field arguments.
+	 * @return void
+	 */
+	public function render_wp_memory_field( $args ) {
+		$options       = $this->get_option( 'easy_php_settings_wp_memory_settings' );
+		$key           = $args['key'];
+		$value         = isset( $options[ $key ] ) ? $options[ $key ] : '';
+		$current_value = $this->get_wp_memory_value( $key );
+
+		echo "<input type='text' name='easy_php_settings_wp_memory_settings[" . esc_attr( $key ) . "]' value='" . esc_attr( $value ) . "' class='regular-text' placeholder='" . esc_attr( $this->wp_memory_recommended_values[ $key ] ?? '' ) . "'>";
+
+		$this->render_wp_memory_status_indicator( $key, $current_value );
+	}
+
 	/**
 	 * Render status indicator.
 	 *
@@ -327,6 +387,51 @@ class Easy_PHP_Settings {
 		if ( isset( $this->recommended_values[ $key ] ) ) {
 			$recommended_value_str = $this->recommended_values[ $key ];
 			/* translators: %s: Recommended PHP value */
+			$description .= sprintf( esc_html__( ' | Recommended: %s', 'easy-php-settings' ), esc_html( $recommended_value_str ) );
+
+			// Convert values to bytes for comparison.
+			$current_val_bytes     = $this->convert_to_bytes( $current_value );
+			$recommended_val_bytes = $this->convert_to_bytes( $recommended_value_str );
+
+			if ( $current_val_bytes < $recommended_val_bytes ) {
+				$description .= ' <span style="color: red;">' . esc_html__( '(Low)', 'easy-php-settings' ) . '</span>';
+			} else {
+				$description .= ' <span style="color: green;">' . esc_html__( '(OK)', 'easy-php-settings' ) . '</span>';
+			}
+		}
+		echo '<p class="description">' . wp_kses_post( $description ) . '</p>';
+	}
+
+	/**
+	 * Get WordPress memory value.
+	 *
+	 * @param string $key The memory setting key.
+	 * @return string The current memory value.
+	 */
+	private function get_wp_memory_value( $key ) {
+		switch ( $key ) {
+			case 'wp_memory_limit':
+				return defined( 'WP_MEMORY_LIMIT' ) ? WP_MEMORY_LIMIT : '40M';
+			case 'wp_max_memory_limit':
+				return defined( 'WP_MAX_MEMORY_LIMIT' ) ? WP_MAX_MEMORY_LIMIT : '256M';
+			default:
+				return 'N/A';
+		}
+	}
+
+	/**
+	 * Render WordPress memory status indicator.
+	 *
+	 * @param string $key The setting key.
+	 * @param string $current_value The current value.
+	 * @return void
+	 */
+	private function render_wp_memory_status_indicator( $key, $current_value ) {
+		/* translators: %s: Current WordPress memory value */
+		$description = sprintf( esc_html__( 'Current value: %s', 'easy-php-settings' ), esc_html( $current_value ) );
+		if ( isset( $this->wp_memory_recommended_values[ $key ] ) ) {
+			$recommended_value_str = $this->wp_memory_recommended_values[ $key ];
+			/* translators: %s: Recommended WordPress memory value */
 			$description .= sprintf( esc_html__( ' | Recommended: %s', 'easy-php-settings' ), esc_html( $recommended_value_str ) );
 
 			// Convert values to bytes for comparison.
@@ -510,6 +615,36 @@ class Easy_PHP_Settings {
 				?>
 			</form>
 
+			<form action="options.php" method="post" style="margin-top: 30px;">
+				<?php
+				settings_fields( 'easy_php_settings' );
+				$wp_memory_options = $this->get_option( 'easy_php_settings_wp_memory_settings' );
+				?>
+				<h3><?php esc_html_e( 'WordPress Memory Settings', 'easy-php-settings' ); ?></h3>
+				<p><?php esc_html_e( 'Configure WordPress memory limits. These settings will be added to your wp-config.php file.', 'easy-php-settings' ); ?></p>
+				<table class="form-table">
+					<tr>
+						<th scope="row">
+							<label for="wp_memory_limit"><?php esc_html_e( 'WP_MEMORY_LIMIT', 'easy-php-settings' ); ?></label>
+						</th>
+						<td>
+							<?php $this->render_wp_memory_field( array( 'key' => 'wp_memory_limit' ) ); ?>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">
+							<label for="wp_max_memory_limit"><?php esc_html_e( 'WP_MAX_MEMORY_LIMIT', 'easy-php-settings' ); ?></label>
+						</th>
+						<td>
+							<?php $this->render_wp_memory_field( array( 'key' => 'wp_max_memory_limit' ) ); ?>
+						</td>
+					</tr>
+				</table>
+				<?php submit_button( __( 'Save WordPress Memory Settings', 'easy-php-settings' ) ); ?>
+			</form>
+
+
+
 			<form action="" method="post" style="margin-top: 20px;">
 				<?php wp_nonce_field( 'easy_php_settings_delete_ini_nonce' ); ?>
 				<button type="submit" name="easy_php_settings_delete_ini_files" class="button button-danger" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to delete the .user.ini and php.ini files created by this plugin?', 'easy-php-settings' ) ); ?>');">
@@ -690,6 +825,26 @@ class Easy_PHP_Settings {
 				</tbody>
 			</table>
 
+			<h3 style="margin-top: 30px;"><?php esc_html_e( 'WordPress Memory Status', 'easy-php-settings' ); ?></h3>
+			<table class="wp-list-table widefat fixed striped">
+				<thead>
+					<tr>
+						<th scope="col"><?php esc_html_e( 'Setting', 'easy-php-settings' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Current Value', 'easy-php-settings' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Recommended', 'easy-php-settings' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $this->wp_memory_settings_keys as $key ) : ?>
+					<tr>
+						<td><strong><?php echo esc_html( strtoupper( $key ) ); ?></strong></td>
+						<td><?php echo esc_html( $this->get_wp_memory_value( $key ) ); ?></td>
+						<td><?php echo esc_html( $this->wp_memory_recommended_values[ $key ] ?? 'N/A' ); ?></td>
+					</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+
 			<h3 style="margin-top: 30px;"><?php esc_html_e( 'Server Status', 'easy-php-settings' ); ?></h3>
 			<table class="wp-list-table widefat fixed striped">
 				<thead>
@@ -846,6 +1001,46 @@ class Easy_PHP_Settings {
 		add_settings_error( 'easy_php_settings_debugging_settings', 'settings_updated', __( 'Debugging settings updated successfully.', 'easy-php-settings' ), 'updated' );
 
 		return $new_options;
+	}
+
+	/**
+	 * Update WordPress memory constants in wp-config.php.
+	 *
+	 * @param array $input The input array.
+	 * @return void
+	 */
+	public function update_wp_memory_constants( $input ) {
+		global $wp_filesystem;
+		if ( ! $wp_filesystem ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			WP_Filesystem();
+		}
+
+		$config_path = ABSPATH . 'wp-config.php';
+		if ( ! $wp_filesystem->is_writable( $config_path ) ) {
+			add_settings_error( 'easy_php_settings_wp_memory_settings', 'config_not_writable', __( 'wp-config.php is not writable.', 'easy-php-settings' ), 'error' );
+			return;
+		}
+
+		$config_content = $wp_filesystem->get_contents( $config_path );
+		$constants      = array( 'WP_MEMORY_LIMIT', 'WP_MAX_MEMORY_LIMIT' );
+
+		foreach ( $constants as $const ) {
+			$key = strtolower( $const );
+			if ( isset( $input[ $key ] ) && ! empty( $input[ $key ] ) ) {
+				$value = "'" . $input[ $key ] . "'";
+
+				if ( preg_match( '/define\(\s*\'' . $const . '\'\s*,\s*\'.*?\'\s*\);/i', $config_content ) ) {
+					$config_content = preg_replace( '/define\(\s*\'' . $const . '\'\s*,\s*\'.*?\'\s*\);/i', "define( '$const', $value );", $config_content );
+				} else {
+					$config_content = str_replace( "/* That's all, stop editing!", "define( '$const', $value );\n\n/* That's all, stop editing!", $config_content );
+				}
+			}
+		}
+
+		$wp_filesystem->put_contents( $config_path, $config_content );
+
+		add_settings_error( 'easy_php_settings_wp_memory_settings', 'wp_memory_updated', __( 'WordPress memory settings updated successfully in wp-config.php.', 'easy-php-settings' ), 'updated' );
 	}
 
 	/**
