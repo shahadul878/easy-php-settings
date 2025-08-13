@@ -3,7 +3,7 @@ Contributors: shahadul878
 Tags: php settings, ini, performance, debug, wp-config
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -17,6 +17,7 @@ Easy PHP Settings provides a user-friendly interface to view and manage crucial 
 **Key Features:**
 
 *   **Manage PHP Settings:** Easily modify common PHP settings such as `memory_limit`, `upload_max_filesize`, `post_max_size`, `max_execution_time`, and `max_input_vars`.
+*   **WordPress Memory Management:** Configure WordPress-specific memory limits including `WP_MEMORY_LIMIT` and `WP_MAX_MEMORY_LIMIT` to optimize your site's performance.
 *   **Automatic Configuration:** When you save your settings, the plugin automatically generates `.user.ini` and `php.ini` files in your WordPress root directory.
 *   **Configuration Generator:** For locked-down environments, the plugin provides a generator to create configuration snippets that you can manually add to your server files.
 *   **Live Status Checker:** A dedicated "Status" tab shows your current server environment, including PHP version, server software, and a comparison of current vs. recommended PHP values.
@@ -45,6 +46,10 @@ When you save settings, the plugin automatically creates these files in the root
 
 These switches directly control the debugging constants in your `wp-config.php` file. Toggling them on or off will define or update the corresponding constant (`WP_DEBUG`, `WP_DEBUG_LOG`, etc.), allowing you to easily enable or disable WordPress debugging modes.
 
+= What is WP_MEMORY_LIMIT and why is it important? =
+
+`WP_MEMORY_LIMIT` is a WordPress-specific constant that controls the amount of memory allocated to WordPress for its operations. It's different from PHP's `memory_limit` as it specifically affects WordPress processes. This setting is crucial for sites with many plugins, themes, or heavy content management. The plugin allows you to easily configure this setting to prevent "Allowed memory size exhausted" errors and improve your site's performance.
+
 == Screenshots ==
 
 1. The General Settings tab where users can input their desired PHP values.
@@ -53,6 +58,12 @@ These switches directly control the debugging constants in your `wp-config.php` 
 4. The Debugging tab, with toggle switches for WordPress debugging constants.
 
 == Changelog ==
+
+= 1.0.3 =
+* Added: WordPress memory limit management (`WP_MEMORY_LIMIT` and `WP_MAX_MEMORY_LIMIT`) configuration.
+* Enhanced: Better error handling and user feedback.
+* Improved: Code documentation and inline comments.
+* Updated: Documentation to include WordPress memory management features.
 
 = 1.0.2 =
 * Fixed: PHPCS coding standards compliance - resolved all errors and warnings.
