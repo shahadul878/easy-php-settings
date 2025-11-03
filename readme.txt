@@ -3,7 +3,7 @@ Contributors: shahadul878
 Tags: php settings, ini, performance, debug, wp-config
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -16,15 +16,76 @@ Easy PHP Settings provides a user-friendly interface to view and manage crucial 
 
 **Key Features:**
 
-*   **Manage PHP Settings:** Easily modify common PHP settings such as `memory_limit`, `upload_max_filesize`, `post_max_size`, `max_execution_time`, and `max_input_vars`.
+*   **Manage PHP Settings:** Easily modify the 5 core PHP settings (`memory_limit`, `upload_max_filesize`, `post_max_size`, `max_execution_time`, `max_input_vars`) through dedicated fields.
+*   **Custom php.ini Configuration:** Add any additional PHP directives (session settings, timezone, logging, file uploads, etc.) directly in the flexible custom configuration textarea.
+*   **Quick Presets:** Choose from pre-configured optimization profiles (Default, Performance, WooCommerce, Development, Large Media) that populate both core fields and custom php.ini directives automatically.
 *   **WordPress Memory Management:** Configure WordPress-specific memory limits including `WP_MEMORY_LIMIT` and `WP_MAX_MEMORY_LIMIT` to optimize your site's performance.
 *   **Automatic Configuration:** When you save your settings, the plugin automatically generates `.user.ini` and `php.ini` files in your WordPress root directory.
 *   **Configuration Generator:** For locked-down environments, the plugin provides a generator to create configuration snippets that you can manually add to your server files.
+*   **PHP Extensions Viewer:** View all loaded PHP extensions categorized by type, with indicators for critical missing extensions and recommendations.
+*   **Settings Validation:** Automatically detects potentially problematic configuration values and warns you before saving.
+*   **Settings History:** Track all changes made to your settings with the ability to restore previous configurations. Export history as CSV.
+*   **Import/Export:** Backup your settings as JSON files and migrate configurations between sites effortlessly.
+*   **One-Click Reset:** Reset to recommended values or server defaults with automatic backup creation.
+*   **Helpful Tooltips:** Hover over help icons next to each setting to understand what it does and why it matters.
 *   **Live Status Checker:** A dedicated "Status" tab shows your current server environment, including PHP version, server software, and a comparison of current vs. recommended PHP values.
 *   **WordPress Debugging:** A "Debugging" tab with on/off switches lets you easily toggle `WP_DEBUG`, `WP_DEBUG_LOG`, `WP_DEBUG_DISPLAY`, and `SCRIPT_DEBUG` constants in your `wp-config.php` file.
 *   **Multisite Compatible:** On multisite networks, settings are managed at the network level by Super Admins.
 
 This plugin is perfect for developers and site administrators who want a quick and safe way to view and adjust their site's technical settings.
+
+== Pro Features ==
+
+Upgrade to Easy PHP Settings Pro for advanced controls, automation, and tooling designed for performance, safety, and team productivity.
+
+=== Advanced PHP & Server Controls ===
+
+* Manage all PHP INI directives (memory, upload, post size, execution time, input vars, OPcache, sessions, error_reporting).
+* Advanced Config Generator (Apache .htaccess, NGINX snippets, cPanel/LiteSpeed compatibility).
+* Per-site overrides in Multisite (instead of only Network Admin).
+* PHP Extension Checker → Detects missing extensions (imagick, intl, bcmath, etc.) and gives install guidance.
+* Real-time Server Health Monitor → CPU, RAM, disk usage, PHP-FPM pool stats.
+
+=== Optimization & Performance ===
+
+* One-click Optimization Profiles (ready presets):
+    * WooCommerce Stores
+    * Elementor / Page Builders
+    * LMS (LearnDash, TutorLMS)
+    * High Traffic Blogs
+    * Multisite Networks
+* Smart Recommendations → Suggest best values based on your hosting/server.
+* OPcache Manager → Enable/disable and tune OPcache.
+
+=== Safety & Reliability ===
+
+* Backup & Restore Configurations (before/after editing .user.ini & php.ini).
+* Safe Mode → If wrong values break the site, plugin auto-rolls back to last working config.
+* Error Log Viewer → View PHP error logs and debug logs directly from dashboard.
+* Email Alerts & Notifications → Sends warnings if PHP limits are too low, or site hits memory/time limits.
+
+=== Productivity & Agency Tools ===
+
+* Import / Export Settings → Save your preferred config and apply on other sites.
+* Multi-Site Templates → Apply one config across the network.
+* White-label Option → Rebrand plugin for agencies (hide “Easy PHP Settings” branding).
+* Role-based Access → Allow only specific roles (like Admins, Developers) to change PHP settings.
+
+=== Premium Experience ===
+
+* Priority Support (faster replies, email/ticket).
+* Regular Pro Updates with new hosting compatibility.
+* Advanced Documentation & Tutorials (step-by-step setup guides).
+
+=== Summary (Pro Highlights) ===
+
+* Advanced Settings (all directives, OPcache, sessions)
+* Profiles (WooCommerce, LMS, high traffic, etc.)
+* Monitoring (server health, error logs)
+* Backup/Restore + Safe Mode
+* Import/Export & Agency Tools
+* Alerts & Notifications
+* Premium Support
 
 == Installation ==
 
@@ -58,6 +119,23 @@ These switches directly control the debugging constants in your `wp-config.php` 
 4. The Debugging tab, with toggle switches for WordPress debugging constants.
 
 == Changelog ==
+
+= 1.0.4 =
+* Added: Quick Settings Presets - Choose from 5 optimization profiles (Default, Performance, WooCommerce, Development, Large Media). Each preset includes optimized values for core settings and custom php.ini directives.
+* Added: PHP Extensions Viewer tab - View all loaded PHP extensions categorized by type with missing extension alerts.
+* Added: Settings History tracking - Track all changes with ability to restore previous configurations and export as CSV.
+* Added: Import/Export functionality - Backup and migrate settings between sites as JSON files.
+* Added: One-Click Reset - Reset to recommended values or server defaults with automatic backups.
+* Added: Settings Validation - Automatic detection of problematic configuration values with warnings.
+* Added: Helpful Tooltips - Help icons next to each setting explaining what it does.
+* Added: New Tools tab for Import/Export and Reset operations.
+* Enhanced: Custom php.ini Configuration textarea now includes helpful examples and placeholder text for common directives (session, timezone, logging, file uploads, etc.).
+* Enhanced: Improved UI with better organization and visual indicators.
+* Enhanced: Client-side validation with warnings before saving.
+* Enhanced: Better status indicators with color-coded warnings.
+* Enhanced: Search functionality for extensions.
+* Improved: Code organization and documentation.
+* Improved: Consolidated two save buttons into one "Save All Settings" button for better UX.
 
 = 1.0.3 =
 * Added: WordPress memory limit management (`WP_MEMORY_LIMIT` and `WP_MAX_MEMORY_LIMIT`) configuration.

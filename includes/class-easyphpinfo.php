@@ -98,10 +98,11 @@ class EasyPHPInfo {
 					$askapache,
 					PREG_SET_ORDER
 				);
-				// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			// phpcs:disable WordPress.PHP.NoSilencedErrors.Discouraged -- Intentional error suppression for array key checking in phpinfo parsing.
 				foreach ( $askapache as $m ) {
 					$pi[ $n ][ $m[1] ] = ( ! isset( $m[3] ) || @$m[2] === $m[3] ) ? @$m[2] : array_slice( $m, 2 );
 				}
+			// phpcs:enable WordPress.PHP.NoSilencedErrors.Discouraged
 			}
 
 			self::$info_array = $pi;

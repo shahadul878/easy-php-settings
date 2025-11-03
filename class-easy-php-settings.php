@@ -3,7 +3,7 @@
  * Plugin Name: Easy PHP Settings
  * Plugin URI:  https://github.com/easy-php-settings
  * Description: An easy way to manage common PHP INI settings from the WordPress admin panel.
- * Version:     1.0.3
+ * Version:     1.0.4
  * Author:      H M Shahadul Islam
  * Author URI:  https://github.com/shahadul878
  * License:     GPL-2.0+
@@ -21,6 +21,8 @@ if ( ! defined( 'WPINC' ) ) {
 
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easyphpinfo.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easyinifile.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-settings-history.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-extensions-viewer.php';
 
 /**
  * Class Easy_PHP_Settings
@@ -39,8 +41,6 @@ class Easy_PHP_Settings {
 		'post_max_size',
 		'max_execution_time',
 		'max_input_vars',
-		'display_errors',
-		'error_reporting',
 	);
 
 	/**
@@ -81,12 +81,28 @@ class Easy_PHP_Settings {
 	 *
 	 * @var string
 	 */
-	private $version = '1.0.3';
+	private $version = '1.0.4';
+
+	/**
+	 * Setting tooltips
+	 *
+	 * @var array
+	 */
+	private $setting_tooltips = array();
+
+	/**
+	 * Quick presets
+	 *
+	 * @var array
+	 */
+	private $quick_presets = array();
 
 	/**
 	 *  Initializes plugin settings.
 	 */
 	public function __construct() {
+		$this->init_tooltips();
+		$this->init_presets();
 		$hook = is_multisite() ? 'network_admin_menu' : 'admin_menu';
 		add_action( $hook, array( $this, 'add_admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'settings_init' ) );
@@ -94,6 +110,9 @@ class Easy_PHP_Settings {
 		add_action( 'admin_init', array( $this, 'debugging_settings_init' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_styles' ) );
 		add_action( 'admin_init', array( $this, 'handle_log_actions' ) );
+		add_action( 'admin_init', array( $this, 'handle_export_import' ) );
+		add_action( 'admin_init', array( $this, 'handle_reset_actions' ) );
+		add_action( 'admin_init', array( $this, 'handle_history_actions' ) );
 	}
 
 	/**
@@ -144,6 +163,10 @@ class Easy_PHP_Settings {
 				'copiedText'     => esc_html__( 'Copied to clipboard!', 'easy-php-settings' ),
 				'testCompleted'  => esc_html__( 'Settings test completed. Check the Status tab for detailed information.', 'easy-php-settings' ),
 				'noRowsSelected' => esc_html__( 'No rows selected.', 'easy-php-settings' ),
+				'presets'        => $this->quick_presets,
+				'tooltips'       => $this->setting_tooltips,
+				'ajaxurl'        => admin_url( 'admin-ajax.php' ),
+				'nonce'          => wp_create_nonce( 'easy_php_settings_ajax_nonce' ),
 			)
 		);
 	}
@@ -190,6 +213,117 @@ class Easy_PHP_Settings {
 	}
 
 	/**
+	 * Initialize tooltips
+	 *
+	 * @return void
+	 */
+	private function init_tooltips() {
+		$this->setting_tooltips = array(
+			'memory_limit'        => __( 'Maximum amount of memory a script may consume. Increase for large sites or complex operations.', 'easy-php-settings' ),
+			'upload_max_filesize' => __( 'Maximum size of an uploaded file. Important for media uploads.', 'easy-php-settings' ),
+			'post_max_size'       => __( 'Maximum size of POST data. Must be larger than upload_max_filesize.', 'easy-php-settings' ),
+			'max_execution_time'  => __( 'Maximum time in seconds a script is allowed to run before it is terminated.', 'easy-php-settings' ),
+			'max_input_vars'      => __( 'Maximum number of input variables accepted. Increase for large forms or page builders.', 'easy-php-settings' ),
+			'wp_memory_limit'     => __( 'WordPress memory limit for normal operations.', 'easy-php-settings' ),
+			'wp_max_memory_limit' => __( 'WordPress memory limit for admin operations (usually higher).', 'easy-php-settings' ),
+		);
+	}
+
+	/**
+	 * Initialize presets
+	 *
+	 * @return void
+	 */
+	private function init_presets() {
+		$this->quick_presets = array(
+			'default'     => array(
+				'name'                => __( 'Default', 'easy-php-settings' ),
+				'description'         => __( 'WordPress default values', 'easy-php-settings' ),
+				'memory_limit'        => '128M',
+				'upload_max_filesize' => '32M',
+				'post_max_size'       => '64M',
+				'max_execution_time'  => '30',
+				'max_input_vars'      => '1000',
+				'custom_php_ini'      => '; Additional PHP directives (optional)
+session.gc_maxlifetime = 1440
+log_errors = 1
+date.timezone = UTC
+max_file_uploads = 20
+max_input_time = 60',
+			),
+			'performance' => array(
+				'name'                => __( 'Performance Optimized', 'easy-php-settings' ),
+				'description'         => __( 'Higher limits for busy sites', 'easy-php-settings' ),
+				'memory_limit'        => '256M',
+				'upload_max_filesize' => '128M',
+				'post_max_size'       => '256M',
+				'max_execution_time'  => '300',
+				'max_input_vars'      => '10000',
+				'custom_php_ini'      => '; Performance optimizations
+session.gc_maxlifetime = 1440
+log_errors = 1
+date.timezone = UTC
+max_file_uploads = 20
+max_input_time = 120
+opcache.enable = 1
+opcache.memory_consumption = 128
+opcache.max_accelerated_files = 10000',
+			),
+			'woocommerce' => array(
+				'name'                => __( 'WooCommerce', 'easy-php-settings' ),
+				'description'         => __( 'Optimized for e-commerce sites', 'easy-php-settings' ),
+				'memory_limit'        => '256M',
+				'upload_max_filesize' => '64M',
+				'post_max_size'       => '128M',
+				'max_execution_time'  => '180',
+				'max_input_vars'      => '5000',
+				'custom_php_ini'      => '; WooCommerce optimizations
+session.gc_maxlifetime = 3600
+log_errors = 1
+date.timezone = UTC
+max_file_uploads = 20
+max_input_time = 90
+session.cookie_lifetime = 3600',
+			),
+			'development' => array(
+				'name'                => __( 'Development', 'easy-php-settings' ),
+				'description'         => __( 'High limits for development environments', 'easy-php-settings' ),
+				'memory_limit'        => '512M',
+				'upload_max_filesize' => '256M',
+				'post_max_size'       => '512M',
+				'max_execution_time'  => '600',
+				'max_input_vars'      => '10000',
+				'custom_php_ini'      => '; Development settings
+session.gc_maxlifetime = 1440
+log_errors = 1
+display_errors = 1
+error_reporting = E_ALL
+date.timezone = UTC
+max_file_uploads = 50
+max_input_time = 300
+xdebug.max_nesting_level = 512',
+			),
+			'large_media' => array(
+				'name'                => __( 'Large Media', 'easy-php-settings' ),
+				'description'         => __( 'For sites handling large files', 'easy-php-settings' ),
+				'memory_limit'        => '384M',
+				'upload_max_filesize' => '512M',
+				'post_max_size'       => '768M',
+				'max_execution_time'  => '600',
+				'max_input_vars'      => '5000',
+				'custom_php_ini'      => '; Large file handling
+session.gc_maxlifetime = 1440
+log_errors = 1
+date.timezone = UTC
+max_file_uploads = 50
+max_input_time = 300
+post_max_size = 768M
+upload_max_filesize = 512M',
+			),
+		);
+	}
+
+	/**
 	 * Add admin menu.
 	 *
 	 * @return void
@@ -213,6 +347,36 @@ class Easy_PHP_Settings {
 		register_setting( 'easy_php_settings', 'easy_php_settings_settings', array( $this, 'sanitize_callback' ) );
 		register_setting( 'easy_php_settings', 'easy_php_settings_wp_memory_settings', array( $this, 'sanitize_wp_memory_callback' ) );
 
+		// Add PHP Settings section and fields.
+		add_settings_section(
+			'easy_php_settings_section',
+			__( 'PHP Configuration Settings', 'easy-php-settings' ),
+			function () {
+				echo '<p>' . esc_html__( 'Configure PHP settings to optimize your WordPress site performance.', 'easy-php-settings' ) . '</p>';
+			},
+			'easy_php_settings'
+		);
+
+		// Register fields for each PHP setting.
+		$setting_labels = array(
+			'memory_limit'        => __( 'Memory Limit', 'easy-php-settings' ),
+			'upload_max_filesize' => __( 'Upload Max Filesize', 'easy-php-settings' ),
+			'post_max_size'       => __( 'Post Max Size', 'easy-php-settings' ),
+			'max_execution_time'  => __( 'Max Execution Time', 'easy-php-settings' ),
+			'max_input_vars'      => __( 'Max Input Vars', 'easy-php-settings' ),
+		);
+
+		foreach ( $this->settings_keys as $key ) {
+			add_settings_field(
+				$key,
+				$setting_labels[ $key ] ?? ucwords( str_replace( array( '_', '.' ), ' ', $key ) ),
+				array( $this, 'render_setting_field' ),
+				'easy_php_settings',
+				'easy_php_settings_section',
+				array( 'key' => $key )
+			);
+		}
+
 		// Apply settings.
 		$this->apply_settings();
 	}
@@ -224,20 +388,31 @@ class Easy_PHP_Settings {
 	 * @return array The sanitized input array.
 	 */
 	public function sanitize_callback( $input ) {
+		$old_input = $this->get_option( 'easy_php_settings_settings', array() );
 		$new_input = array();
+
 		foreach ( $this->settings_keys as $key ) {
 			if ( isset( $input[ $key ] ) ) {
 				$new_input[ $key ] = sanitize_text_field( $input[ $key ] );
 			}
 		}
+
 		// Save custom php.ini textarea.
 		if ( isset( $input['custom_php_ini'] ) ) {
 			$new_input['custom_php_ini'] = trim( $input['custom_php_ini'] );
 		}
+
+		// Validate settings and show warnings.
+		$this->validate_settings( $new_input );
+
+		// Track history.
+		Easy_Settings_History::add_entry( $old_input, $new_input, 'php_settings' );
+
 		// Auto-generate configuration files when settings are saved.
 		if ( ! empty( $new_input ) ) {
 			$this->generate_config_files( $new_input );
 		}
+
 		return $new_input;
 	}
 
@@ -248,16 +423,23 @@ class Easy_PHP_Settings {
 	 * @return array The sanitized input array.
 	 */
 	public function sanitize_wp_memory_callback( $input ) {
+		$old_input = $this->get_option( 'easy_php_settings_wp_memory_settings', array() );
 		$new_input = array();
+
 		foreach ( $this->wp_memory_settings_keys as $key ) {
 			if ( isset( $input[ $key ] ) ) {
 				$new_input[ $key ] = sanitize_text_field( $input[ $key ] );
 			}
 		}
+
+		// Track history.
+		Easy_Settings_History::add_entry( $old_input, $new_input, 'wp_memory' );
+
 		// Update wp-config.php with WordPress memory settings.
 		if ( ! empty( $new_input ) ) {
 			$this->update_wp_memory_constants( $new_input );
 		}
+
 		return $new_input;
 	}
 
@@ -511,6 +693,52 @@ class Easy_PHP_Settings {
 	}
 
 	/**
+	 * Validate settings and show warnings
+	 *
+	 * @param array $settings The settings array to validate.
+	 * @return void
+	 */
+	private function validate_settings( $settings ) {
+		$warnings = array();
+
+		// Check if post_max_size < upload_max_filesize.
+		if ( isset( $settings['post_max_size'] ) && isset( $settings['upload_max_filesize'] ) ) {
+			$post_max   = $this->convert_to_bytes( $settings['post_max_size'] );
+			$upload_max = $this->convert_to_bytes( $settings['upload_max_filesize'] );
+			if ( $post_max < $upload_max ) {
+				$warnings[] = __( 'post_max_size should be larger than upload_max_filesize.', 'easy-php-settings' );
+			}
+		}
+
+		// Check if memory_limit < post_max_size.
+		if ( isset( $settings['memory_limit'] ) && isset( $settings['post_max_size'] ) ) {
+			$memory_limit = $this->convert_to_bytes( $settings['memory_limit'] );
+			$post_max     = $this->convert_to_bytes( $settings['post_max_size'] );
+			if ( $memory_limit < $post_max ) {
+				$warnings[] = __( 'memory_limit should be larger than post_max_size.', 'easy-php-settings' );
+			}
+		}
+
+		// Check if max_execution_time is too low.
+		if ( isset( $settings['max_execution_time'] ) && intval( $settings['max_execution_time'] ) < 30 ) {
+			$warnings[] = __( 'max_execution_time is very low (less than 30 seconds) and may cause issues.', 'easy-php-settings' );
+		}
+
+		// Check if memory_limit is excessive.
+		if ( isset( $settings['memory_limit'] ) ) {
+			$memory_limit = $this->convert_to_bytes( $settings['memory_limit'] );
+			if ( $memory_limit > 536870912 ) { // 512M in bytes.
+				$warnings[] = __( 'memory_limit is very high (over 512M). This may be excessive unless you have a specific need.', 'easy-php-settings' );
+			}
+		}
+
+		// Show warnings if any.
+		foreach ( $warnings as $warning ) {
+			add_settings_error( 'easy_php_settings_settings', 'validation_warning', $warning, 'warning' );
+		}
+	}
+
+	/**
 	 * Apply settings.
 	 *
 	 * @return void
@@ -528,7 +756,7 @@ class Easy_PHP_Settings {
 
 					if ( $is_changeable ) {
 						$old_value = ini_get( $key );
-                        // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged
+						// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.PHP.IniSet.Risky -- Required for plugin functionality to test runtime PHP configuration changes.
 						if ( @ini_set( $key, $value ) === false ) {
 							add_action(
 								'admin_notices',
@@ -569,6 +797,170 @@ class Easy_PHP_Settings {
 	}
 
 	/**
+	 * Handle export and import actions
+	 *
+	 * @return void
+	 */
+	public function handle_export_import() {
+		// Handle export.
+		if ( isset( $_POST['easy_php_settings_export'] ) && check_admin_referer( 'easy_php_settings_export_nonce' ) ) {
+			if ( ! current_user_can( $this->get_capability() ) ) {
+				return;
+			}
+
+			$settings = array(
+				'php_settings'    => $this->get_option( 'easy_php_settings_settings', array() ),
+				'wp_memory'       => $this->get_option( 'easy_php_settings_wp_memory_settings', array() ),
+				'plugin_version'  => $this->version,
+				'export_time'     => current_time( 'mysql' ),
+				'export_site_url' => get_site_url(),
+			);
+
+			header( 'Content-Type: application/json' );
+			header( 'Content-Disposition: attachment; filename="easy-php-settings-' . gmdate( 'Y-m-d-His' ) . '.json"' );
+			echo wp_json_encode( $settings, JSON_PRETTY_PRINT );
+			exit;
+		}
+
+		// Handle import.
+		if ( isset( $_POST['easy_php_settings_import'] ) && check_admin_referer( 'easy_php_settings_import_nonce' ) ) {
+			if ( ! current_user_can( $this->get_capability() ) ) {
+				return;
+			}
+
+			if ( ! isset( $_FILES['import_file'] ) || empty( $_FILES['import_file']['tmp_name'] ) ) {
+				add_settings_error( 'easy_php_settings_settings', 'import_no_file', __( 'No file selected for import.', 'easy-php-settings' ), 'error' );
+				return;
+			}
+
+			global $wp_filesystem;
+			if ( ! $wp_filesystem ) {
+				require_once ABSPATH . 'wp-admin/includes/file.php';
+				WP_Filesystem();
+			}
+
+			$json_data = $wp_filesystem->get_contents( $_FILES['import_file']['tmp_name'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$settings  = json_decode( $json_data, true );
+
+			if ( ! $settings || ! is_array( $settings ) ) {
+				add_settings_error( 'easy_php_settings_settings', 'import_invalid', __( 'Invalid settings file format.', 'easy-php-settings' ), 'error' );
+				return;
+			}
+
+			// Create backup before importing.
+			$backup = array(
+				'php_settings' => $this->get_option( 'easy_php_settings_settings', array() ),
+				'wp_memory'    => $this->get_option( 'easy_php_settings_wp_memory_settings', array() ),
+			);
+			$this->update_option( 'easy_php_settings_import_backup', $backup );
+
+			// Import settings.
+			if ( isset( $settings['php_settings'] ) ) {
+				$this->update_option( 'easy_php_settings_settings', $settings['php_settings'] );
+			}
+			if ( isset( $settings['wp_memory'] ) ) {
+				$this->update_option( 'easy_php_settings_wp_memory_settings', $settings['wp_memory'] );
+			}
+
+			add_settings_error( 'easy_php_settings_settings', 'import_success', __( 'Settings imported successfully. A backup of your previous settings was created.', 'easy-php-settings' ), 'updated' );
+		}
+	}
+
+	/**
+	 * Handle reset actions
+	 *
+	 * @return void
+	 */
+	public function handle_reset_actions() {
+		// Reset to recommended values.
+		if ( isset( $_POST['easy_php_settings_reset_recommended'] ) && check_admin_referer( 'easy_php_settings_reset_nonce' ) ) {
+			if ( ! current_user_can( $this->get_capability() ) ) {
+				return;
+			}
+
+			// Create backup.
+			$backup = $this->get_option( 'easy_php_settings_settings', array() );
+			$this->update_option( 'easy_php_settings_reset_backup', $backup );
+
+			// Set recommended values.
+			$this->update_option( 'easy_php_settings_settings', $this->recommended_values );
+
+			add_settings_error( 'easy_php_settings_settings', 'reset_success', __( 'Settings reset to recommended values. A backup was created.', 'easy-php-settings' ), 'updated' );
+		}
+
+		// Reset to server defaults.
+		if ( isset( $_POST['easy_php_settings_reset_default'] ) && check_admin_referer( 'easy_php_settings_reset_nonce' ) ) {
+			if ( ! current_user_can( $this->get_capability() ) ) {
+				return;
+			}
+
+			// Create backup.
+			$backup = $this->get_option( 'easy_php_settings_settings', array() );
+			$this->update_option( 'easy_php_settings_reset_backup', $backup );
+
+			// Clear all settings.
+			$this->delete_option( 'easy_php_settings_settings' );
+
+			add_settings_error( 'easy_php_settings_settings', 'reset_default_success', __( 'Settings cleared. Server defaults will now apply. A backup was created.', 'easy-php-settings' ), 'updated' );
+		}
+	}
+
+	/**
+	 * Handle history actions
+	 *
+	 * @return void
+	 */
+	public function handle_history_actions() {
+		// Export history as CSV.
+		if ( isset( $_POST['easy_php_settings_export_history'] ) && check_admin_referer( 'easy_php_settings_history_nonce' ) ) {
+			if ( ! current_user_can( $this->get_capability() ) ) {
+				return;
+			}
+
+			$csv = Easy_Settings_History::export_as_csv();
+			header( 'Content-Type: text/csv' );
+			header( 'Content-Disposition: attachment; filename="easy-php-settings-history-' . gmdate( 'Y-m-d-His' ) . '.csv"' );
+			echo $csv; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			exit;
+		}
+
+		// Clear history.
+		if ( isset( $_POST['easy_php_settings_clear_history'] ) && check_admin_referer( 'easy_php_settings_history_nonce' ) ) {
+			if ( ! current_user_can( $this->get_capability() ) ) {
+				return;
+			}
+
+			Easy_Settings_History::clear_history();
+			add_settings_error( 'easy_php_settings_settings', 'history_cleared', __( 'History cleared successfully.', 'easy-php-settings' ), 'updated' );
+		}
+
+		// Restore from history.
+		if ( isset( $_POST['easy_php_settings_restore_history'] ) && isset( $_POST['history_index'] ) && check_admin_referer( 'easy_php_settings_history_nonce' ) ) {
+			if ( ! current_user_can( $this->get_capability() ) ) {
+				return;
+			}
+
+			$index = intval( $_POST['history_index'] );
+			$entry = Easy_Settings_History::get_entry( $index );
+
+			if ( $entry ) {
+				// Build settings from the old values in the history entry.
+				$restored_settings = array();
+				foreach ( $entry['changes'] as $key => $change ) {
+					$restored_settings[ $key ] = $change['old'];
+				}
+
+				if ( 'php_settings' === $entry['setting_type'] ) {
+					$this->update_option( 'easy_php_settings_settings', $restored_settings );
+					add_settings_error( 'easy_php_settings_settings', 'restore_success', __( 'Settings restored from history successfully.', 'easy-php-settings' ), 'updated' );
+				}
+			} else {
+				add_settings_error( 'easy_php_settings_settings', 'restore_failed', __( 'Failed to restore settings from history.', 'easy-php-settings' ), 'error' );
+			}
+		}
+	}
+
+	/**
 	 * Options page HTML.
 	 *
 	 * @return void
@@ -594,53 +986,105 @@ class Easy_PHP_Settings {
 				<a href="?page=easy-php-settings&tab=general_settings&_wpnonce=<?php echo esc_attr( $tab_nonce_url ); ?>" class="nav-tab <?php echo 'general_settings' === $active_tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'General Settings', 'easy-php-settings' ); ?></a>
 				<a href="?page=easy-php-settings&tab=debugging&_wpnonce=<?php echo esc_attr( $tab_nonce_url ); ?>" class="nav-tab <?php echo 'debugging' === $active_tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Debugging', 'easy-php-settings' ); ?></a>
 				<a href="?page=easy-php-settings&tab=php_settings&_wpnonce=<?php echo esc_attr( $tab_nonce_url ); ?>" class="nav-tab <?php echo 'php_settings' === $active_tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'PHP Settings', 'easy-php-settings' ); ?></a>
+				<a href="?page=easy-php-settings&tab=extensions&_wpnonce=<?php echo esc_attr( $tab_nonce_url ); ?>" class="nav-tab <?php echo 'extensions' === $active_tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Extensions', 'easy-php-settings' ); ?></a>
 				<a href="?page=easy-php-settings&tab=status&_wpnonce=<?php echo esc_attr( $tab_nonce_url ); ?>" class="nav-tab <?php echo 'status' === $active_tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Status', 'easy-php-settings' ); ?></a>
+				<a href="?page=easy-php-settings&tab=history&_wpnonce=<?php echo esc_attr( $tab_nonce_url ); ?>" class="nav-tab <?php echo 'history' === $active_tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'History', 'easy-php-settings' ); ?></a>
+				<a href="?page=easy-php-settings&tab=tools&_wpnonce=<?php echo esc_attr( $tab_nonce_url ); ?>" class="nav-tab <?php echo 'tools' === $active_tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Tools', 'easy-php-settings' ); ?></a>
 				<a href="?page=easy-php-settings&tab=log_viewer&_wpnonce=<?php echo esc_attr( $tab_nonce_url ); ?>" class="nav-tab <?php echo 'log_viewer' === $active_tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Log Viewer', 'easy-php-settings' ); ?></a>
+				<a href="?page=easy-php-settings&tab=pro&_wpnonce=<?php echo esc_attr( $tab_nonce_url ); ?>" class="nav-tab <?php echo 'pro' === $active_tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Pro', 'easy-php-settings' ); ?></a>
 			</h2>
 
 			<?php if ( 'general_settings' === $active_tab ) : ?>
 			<form action="options.php" method="post">
 				<?php
 				settings_fields( 'easy_php_settings' );
-				$options = $this->get_option( 'easy_php_settings_settings' );
-				?>
-				<div style="margin-bottom: 20px;">
-					<label for="easy_php_settings_custom_php_ini"><strong><?php esc_html_e( 'Custom php.ini Configuration', 'easy-php-settings' ); ?></strong></label>
-					<textarea name="easy_php_settings_settings[custom_php_ini]" id="easy_php_settings_custom_php_ini" rows="8" style="width:100%;font-family:monospace;" placeholder="; Example: \nmax_file_uploads = 50\nshort_open_tag = Off\n"><?php echo isset( $options['custom_php_ini'] ) ? esc_textarea( $options['custom_php_ini'] ) : ''; ?></textarea>
-					<p class="description"><?php esc_html_e( 'Add any custom php.ini directives here. These will be appended to the generated .user.ini and php.ini files.', 'easy-php-settings' ); ?></p>
-				</div>
-				<?php
-				do_settings_sections( 'easy_php_settings' );
-				submit_button( 'Save Settings' );
-				?>
-			</form>
-
-			<form action="options.php" method="post" style="margin-top: 30px;">
-				<?php
-				settings_fields( 'easy_php_settings' );
+				$options           = $this->get_option( 'easy_php_settings_settings' );
 				$wp_memory_options = $this->get_option( 'easy_php_settings_wp_memory_settings' );
 				?>
-				<h3><?php esc_html_e( 'WordPress Memory Settings', 'easy-php-settings' ); ?></h3>
-				<p><?php esc_html_e( 'Configure WordPress memory limits. These settings will be added to your wp-config.php file.', 'easy-php-settings' ); ?></p>
-				<table class="form-table">
-					<tr>
-						<th scope="row">
-							<label for="wp_memory_limit"><?php esc_html_e( 'WP_MEMORY_LIMIT', 'easy-php-settings' ); ?></label>
-						</th>
-						<td>
-							<?php $this->render_wp_memory_field( array( 'key' => 'wp_memory_limit' ) ); ?>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row">
-							<label for="wp_max_memory_limit"><?php esc_html_e( 'WP_MAX_MEMORY_LIMIT', 'easy-php-settings' ); ?></label>
-						</th>
-						<td>
-							<?php $this->render_wp_memory_field( array( 'key' => 'wp_max_memory_limit' ) ); ?>
-						</td>
-					</tr>
-				</table>
-				<?php submit_button( __( 'Save WordPress Memory Settings', 'easy-php-settings' ) ); ?>
+				<div class="easy-php-settings-preset-box">
+					<h3>
+						<span class="dashicons dashicons-admin-settings" style="color: #2271b1;"></span>
+						<?php esc_html_e( 'Quick Configuration Presets', 'easy-php-settings' ); ?>
+					</h3>
+					<p style="margin-bottom: 12px; color: #646970;">
+						<?php esc_html_e( 'Select a pre-configured optimization profile to instantly apply recommended settings for your specific use case.', 'easy-php-settings' ); ?>
+					</p>
+					<label for="easy_php_settings_preset" style="font-weight: 600; display: block; margin-bottom: 8px;">
+						<?php esc_html_e( 'Choose a Preset:', 'easy-php-settings' ); ?>
+					</label>
+					<select id="easy_php_settings_preset">
+						<option value=""><?php esc_html_e( '-- Select a Preset Configuration --', 'easy-php-settings' ); ?></option>
+						<?php foreach ( $this->quick_presets as $preset_key => $preset_data ) : ?>
+							<option value="<?php echo esc_attr( $preset_key ); ?>">
+								<?php echo esc_html( $preset_data['name'] ); ?> &mdash; <?php echo esc_html( $preset_data['description'] ); ?>
+							</option>
+						<?php endforeach; ?>
+					</select>
+				</div>
+
+				<div class="easy-php-settings-config-box">
+					<h3>
+						<span class="dashicons dashicons-editor-code" style="color: #2271b1;"></span>
+						<?php esc_html_e( 'Custom PHP Configuration', 'easy-php-settings' ); ?>
+					</h3>
+					<p style="margin-bottom: 12px; color: #646970;">
+						<?php esc_html_e( 'Add any additional PHP directives here. These will be included in the generated .user.ini and php.ini files.', 'easy-php-settings' ); ?>
+					</p>
+					<textarea name="easy_php_settings_settings[custom_php_ini]" id="easy_php_settings_custom_php_ini" rows="10" style="width:100%;" placeholder="; Add any custom PHP directives here
+; Examples:
+session.gc_maxlifetime = 1440
+log_errors = 1
+date.timezone = UTC
+max_file_uploads = 20
+max_input_time = 60
+display_errors = Off
+error_reporting = E_ALL & ~E_DEPRECATED"><?php echo isset( $options['custom_php_ini'] ) ? esc_textarea( $options['custom_php_ini'] ) : ''; ?></textarea>
+					<p class="description" style="margin-top: 10px;">
+						<span class="dashicons dashicons-info" style="color: #2271b1;"></span>
+						<?php esc_html_e( 'Use this section for additional PHP directives such as session management, timezone configuration, error logging, and file upload settings.', 'easy-php-settings' ); ?>
+					</p>
+				</div>
+
+				<div class="easy-php-settings-config-box">
+					<h3>
+						<span class="dashicons dashicons-performance" style="color: #2271b1;"></span>
+						<?php esc_html_e( 'Core PHP Settings', 'easy-php-settings' ); ?>
+					</h3>
+					<p style="margin-bottom: 12px; color: #646970;">
+						<?php esc_html_e( 'Configure the essential PHP settings that affect WordPress performance and functionality.', 'easy-php-settings' ); ?>
+					</p>
+					<?php do_settings_sections( 'easy_php_settings' ); ?>
+				</div>
+
+				<div class="easy-php-settings-config-box">
+					<h3>
+						<span class="dashicons dashicons-wordpress" style="color: #2271b1;"></span>
+						<?php esc_html_e( 'WordPress Memory Configuration', 'easy-php-settings' ); ?>
+					</h3>
+					<p style="margin-bottom: 12px; color: #646970;">
+						<?php esc_html_e( 'Configure WordPress-specific memory limits. These constants will be added to your wp-config.php file and control the memory allocated to WordPress operations.', 'easy-php-settings' ); ?>
+					</p>
+					<table class="form-table">
+						<tr>
+							<th scope="row">
+								<label for="wp_memory_limit"><?php esc_html_e( 'WP_MEMORY_LIMIT', 'easy-php-settings' ); ?></label>
+							</th>
+							<td>
+								<?php $this->render_wp_memory_field( array( 'key' => 'wp_memory_limit' ) ); ?>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row">
+								<label for="wp_max_memory_limit"><?php esc_html_e( 'WP_MAX_MEMORY_LIMIT', 'easy-php-settings' ); ?></label>
+							</th>
+							<td>
+								<?php $this->render_wp_memory_field( array( 'key' => 'wp_max_memory_limit' ) ); ?>
+							</td>
+						</tr>
+					</table>
+				</div>
+
+				<?php submit_button( __( 'Save All Settings', 'easy-php-settings' ) ); ?>
 			</form>
 
 
@@ -692,6 +1136,12 @@ class Easy_PHP_Settings {
 				submit_button( __( 'Save Debugging Settings', 'easy-php-settings' ) );
 				?>
 			</form>
+			<?php elseif ( 'extensions' === $active_tab ) : ?>
+				<?php $this->render_extensions_tab(); ?>
+			<?php elseif ( 'history' === $active_tab ) : ?>
+				<?php $this->render_history_tab(); ?>
+			<?php elseif ( 'tools' === $active_tab ) : ?>
+				<?php $this->render_tools_tab(); ?>
 			<?php elseif ( 'log_viewer' === $active_tab ) : ?>
 				<?php $this->render_log_viewer_tab(); ?>
 			<?php elseif ( 'status' === $active_tab ) : ?>
@@ -714,6 +1164,8 @@ class Easy_PHP_Settings {
 					</div>
 					<p style="margin-top: 10px; color: #666;"><em><?php esc_html_e( 'Tip: Use the search box to filter settings. Select rows and click "Copy Selected" to copy them to your clipboard.', 'easy-php-settings' ); ?></em></p>
 				</div>
+			<?php elseif ( 'pro' === $active_tab ) : ?>
+				<?php $this->render_pro_tab(); ?>
 			<?php endif; ?>
 		</div>
 		<?php
@@ -862,6 +1314,323 @@ class Easy_PHP_Settings {
 					<?php endforeach; ?>
 				</tbody>
 			</table>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render Pro tab.
+	 *
+	 * @return void
+	 */
+	public function render_pro_tab() {
+		?>
+		<div id="pro-tab" style="max-width: 980px;">
+			<div style="display:flex; align-items:center; justify-content: space-between; gap: 12px; margin-bottom: 12px;">
+				<h3 style="margin:0;">
+					<?php echo esc_html__( 'Easy PHP Settings – Pro', 'easy-php-settings' ); ?>
+				</h3>
+				<a class="button button-primary" target="_blank" rel="noopener" href="https://github.com/easy-php-settings">
+					<?php echo esc_html__( 'Get Pro', 'easy-php-settings' ); ?>
+				</a>
+			</div>
+
+			<div class="card" style="padding:20px;">
+				<h2 style="margin-top:0;"><?php echo esc_html__( 'Advanced PHP & Server Controls', 'easy-php-settings' ); ?></h2>
+				<ul class="ul-disc">
+					<li><?php echo esc_html__( 'Manage all PHP INI directives (memory, upload, post size, execution time, input vars, OPcache, sessions, error_reporting).', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Advanced Config Generator (Apache .htaccess, NGINX snippets, cPanel/LiteSpeed compatibility).', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Per-site overrides in Multisite (instead of only Network Admin).', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'PHP Extension Checker → Detects missing extensions (imagick, intl, bcmath, etc.) and gives install guidance.', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Real-time Server Health Monitor → CPU, RAM, disk usage, PHP-FPM pool stats.', 'easy-php-settings' ); ?></li>
+				</ul>
+			</div>
+
+			<div class="card" style="padding:20px; margin-top:16px;">
+				<h2 style="margin-top:0;"><?php echo esc_html__( 'Optimization & Performance', 'easy-php-settings' ); ?></h2>
+				<p><strong><?php echo esc_html__( 'One-click Optimization Profiles (ready presets):', 'easy-php-settings' ); ?></strong></p>
+				<ul class="ul-disc">
+					<li><?php echo esc_html__( 'WooCommerce Stores', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Elementor / Page Builders', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'LMS (LearnDash, TutorLMS)', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'High Traffic Blogs', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Multisite Networks', 'easy-php-settings' ); ?></li>
+				</ul>
+				<ul class="ul-disc" style="margin-top:8px;">
+					<li><?php echo esc_html__( 'Smart Recommendations → Suggest best values based on your hosting/server.', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'OPcache Manager → Enable/disable and tune OPcache.', 'easy-php-settings' ); ?></li>
+				</ul>
+			</div>
+
+			<div class="card" style="padding:20px; margin-top:16px;">
+				<h2 style="margin-top:0;"><?php echo esc_html__( 'Safety & Reliability', 'easy-php-settings' ); ?></h2>
+				<ul class="ul-disc">
+					<li><?php echo esc_html__( 'Backup & Restore Configurations (before/after editing .user.ini & php.ini).', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Safe Mode → If wrong values break the site, plugin auto-rolls back to last working config.', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Error Log Viewer → View PHP error logs and debug logs directly from dashboard.', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Email Alerts & Notifications → Sends warnings if PHP limits are too low, or site hits memory/time limits.', 'easy-php-settings' ); ?></li>
+				</ul>
+			</div>
+
+			<div class="card" style="padding:20px; margin-top:16px;">
+				<h2 style="margin-top:0;"><?php echo esc_html__( 'Productivity & Agency Tools', 'easy-php-settings' ); ?></h2>
+				<ul class="ul-disc">
+					<li><?php echo esc_html__( 'Import / Export Settings → Save your preferred config and apply on other sites.', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Multi-Site Templates → Apply one config across the network.', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'White-label Option → Rebrand plugin for agencies (hide “Easy PHP Settings” branding).', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Role-based Access → Allow only specific roles (like Admins, Developers) to change PHP settings.', 'easy-php-settings' ); ?></li>
+				</ul>
+			</div>
+
+			<div class="card" style="padding:20px; margin-top:16px;">
+				<h2 style="margin-top:0;"><?php echo esc_html__( 'Premium Experience', 'easy-php-settings' ); ?></h2>
+				<ul class="ul-disc">
+					<li><?php echo esc_html__( 'Priority Support (faster replies, email/ticket).', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Regular Pro Updates with new hosting compatibility.', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Advanced Documentation & Tutorials (step-by-step setup guides).', 'easy-php-settings' ); ?></li>
+				</ul>
+			</div>
+
+			<div class="card" style="padding:20px; margin-top:16px;">
+				<h2 style="margin-top:0;"><?php echo esc_html__( 'Summary (Pro Highlights)', 'easy-php-settings' ); ?></h2>
+				<ul class="ul-disc">
+					<li><?php echo esc_html__( 'Advanced Settings (all directives, OPcache, sessions)', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Profiles (WooCommerce, LMS, high traffic, etc.)', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Monitoring (server health, error logs)', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Backup/Restore + Safe Mode', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Import/Export & Agency Tools', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Alerts & Notifications', 'easy-php-settings' ); ?></li>
+					<li><?php echo esc_html__( 'Premium Support', 'easy-php-settings' ); ?></li>
+				</ul>
+				<p>
+					<a class="button button-primary" target="_blank" rel="noopener" href="https://github.com/easy-php-settings"><?php echo esc_html__( 'Upgrade to Pro', 'easy-php-settings' ); ?></a>
+				</p>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render Extensions tab.
+	 *
+	 * @return void
+	 */
+	public function render_extensions_tab() {
+		$categorized = Easy_Extensions_Viewer::get_categorized_extensions();
+		$missing     = Easy_Extensions_Viewer::get_critical_missing_extensions();
+		$recommended = Easy_Extensions_Viewer::get_recommended_extensions();
+		?>
+		<div id="extensions-tab">
+			<h3><?php esc_html_e( 'PHP Extensions', 'easy-php-settings' ); ?></h3>
+
+			<?php if ( ! empty( $missing ) ) : ?>
+			<div class="notice notice-error" style="padding: 10px; margin: 20px 0;">
+				<h4 style="margin-top: 0;"><?php esc_html_e( 'Critical Missing Extensions', 'easy-php-settings' ); ?></h4>
+				<ul>
+					<?php foreach ( $missing as $ext => $desc ) : ?>
+					<li><strong><?php echo esc_html( $ext ); ?>:</strong> <?php echo esc_html( $desc ); ?></li>
+					<?php endforeach; ?>
+				</ul>
+			</div>
+			<?php endif; ?>
+
+			<div style="margin-bottom: 20px;">
+				<input type="text" id="extensions-search" placeholder="<?php esc_attr_e( 'Search extensions...', 'easy-php-settings' ); ?>" style="min-width: 250px; padding: 5px;" />
+			</div>
+
+			<?php foreach ( $categorized as $category => $extensions ) : ?>
+			<div style="margin-bottom: 30px;">
+				<h4><?php echo esc_html( $category ); ?></h4>
+				<table class="wp-list-table widefat fixed striped">
+					<thead>
+						<tr>
+							<th scope="col"><?php esc_html_e( 'Extension Name', 'easy-php-settings' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Status', 'easy-php-settings' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Version', 'easy-php-settings' ); ?></th>
+						</tr>
+					</thead>
+					<tbody class="extensions-list">
+						<?php foreach ( $extensions as $extension ) : ?>
+						<tr>
+							<td><strong><?php echo esc_html( $extension ); ?></strong></td>
+							<td><span style="color: green; font-weight: bold;">✓ <?php esc_html_e( 'Loaded', 'easy-php-settings' ); ?></span></td>
+							<td><?php echo esc_html( Easy_Extensions_Viewer::get_extension_version( $extension ) ); ?></td>
+						</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+			<?php endforeach; ?>
+
+			<div style="margin-top: 30px; padding: 15px; background: #f0f6fc; border-left: 4px solid #0073aa;">
+				<h4><?php esc_html_e( 'Recommended Extensions', 'easy-php-settings' ); ?></h4>
+				<ul>
+					<?php foreach ( $recommended as $ext => $desc ) : ?>
+					<li>
+						<strong><?php echo esc_html( $ext ); ?>:</strong> <?php echo esc_html( $desc ); ?>
+						<?php if ( Easy_Extensions_Viewer::is_loaded( $ext ) ) : ?>
+							<span style="color: green;">✓ <?php esc_html_e( 'Installed', 'easy-php-settings' ); ?></span>
+						<?php else : ?>
+							<span style="color: orange;">⚠ <?php esc_html_e( 'Not Installed', 'easy-php-settings' ); ?></span>
+						<?php endif; ?>
+					</li>
+					<?php endforeach; ?>
+				</ul>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render History tab.
+	 *
+	 * @return void
+	 */
+	public function render_history_tab() {
+		$history = Easy_Settings_History::get_history();
+		?>
+		<div id="history-tab">
+			<h3><?php esc_html_e( 'Settings Change History', 'easy-php-settings' ); ?></h3>
+			<p><?php esc_html_e( 'Track all changes made to your PHP and WordPress settings. You can restore previous configurations if needed.', 'easy-php-settings' ); ?></p>
+
+			<div style="margin-bottom: 20px;">
+				<form method="post" style="display: inline-block; margin-right: 10px;">
+					<?php wp_nonce_field( 'easy_php_settings_history_nonce' ); ?>
+					<input type="submit" name="easy_php_settings_export_history" class="button button-secondary" value="<?php esc_attr_e( 'Export as CSV', 'easy-php-settings' ); ?>">
+				</form>
+				<form method="post" style="display: inline-block;" onsubmit="return confirm('<?php echo esc_js( __( 'Are you sure you want to clear all history?', 'easy-php-settings' ) ); ?>');">
+					<?php wp_nonce_field( 'easy_php_settings_history_nonce' ); ?>
+					<input type="submit" name="easy_php_settings_clear_history" class="button button-danger" value="<?php esc_attr_e( 'Clear History', 'easy-php-settings' ); ?>">
+				</form>
+			</div>
+
+			<?php if ( empty( $history ) ) : ?>
+				<p><?php esc_html_e( 'No changes have been recorded yet. History will appear here after you save settings.', 'easy-php-settings' ); ?></p>
+			<?php else : ?>
+				<table class="wp-list-table widefat fixed striped">
+					<thead>
+						<tr>
+							<th scope="col"><?php esc_html_e( 'Date & Time', 'easy-php-settings' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'User', 'easy-php-settings' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Type', 'easy-php-settings' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Changes', 'easy-php-settings' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Actions', 'easy-php-settings' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $history as $index => $entry ) : ?>
+						<tr>
+							<td><?php echo esc_html( $entry['timestamp'] ); ?></td>
+							<td><?php echo esc_html( $entry['user_login'] ); ?></td>
+							<td><?php echo esc_html( ucwords( str_replace( '_', ' ', $entry['setting_type'] ) ) ); ?></td>
+							<td>
+								<details>
+									<summary><?php echo esc_html( count( $entry['changes'] ) ); ?> <?php esc_html_e( 'settings changed', 'easy-php-settings' ); ?></summary>
+									<ul style="margin: 5px 0; padding-left: 20px;">
+										<?php foreach ( $entry['changes'] as $key => $change ) : ?>
+										<li><strong><?php echo esc_html( $key ); ?>:</strong> <?php echo esc_html( $change['old'] ); ?> → <?php echo esc_html( $change['new'] ); ?></li>
+										<?php endforeach; ?>
+									</ul>
+								</details>
+							</td>
+							<td>
+								<form method="post" style="display: inline;">
+									<?php wp_nonce_field( 'easy_php_settings_history_nonce' ); ?>
+									<input type="hidden" name="history_index" value="<?php echo esc_attr( $index ); ?>">
+									<input type="submit" name="easy_php_settings_restore_history" class="button button-small" value="<?php esc_attr_e( 'Restore', 'easy-php-settings' ); ?>" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to restore these settings?', 'easy-php-settings' ) ); ?>');">
+								</form>
+							</td>
+						</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render Tools tab.
+	 *
+	 * @return void
+	 */
+	public function render_tools_tab() {
+		?>
+		<div id="tools-tab">
+			<div class="easy-php-info-box">
+				<p>
+					<span class="dashicons dashicons-admin-tools" style="vertical-align: middle;"></span>
+					<strong><?php esc_html_e( 'Backup & Migration Tools', 'easy-php-settings' ); ?></strong> &mdash; 
+					<?php esc_html_e( 'Use these tools to backup, restore, and migrate your PHP configuration settings between WordPress installations.', 'easy-php-settings' ); ?>
+				</p>
+			</div>
+
+			<div class="easy-php-settings-tool-section">
+				<h4>
+					<span class="dashicons dashicons-download" style="color: #2271b1;"></span>
+					<?php esc_html_e( 'Export Configuration', 'easy-php-settings' ); ?>
+				</h4>
+				<p style="color: #646970; margin-bottom: 15px;">
+					<?php esc_html_e( 'Download your current PHP and WordPress settings as a JSON file. Use this to create backups or migrate configurations to other sites.', 'easy-php-settings' ); ?>
+				</p>
+				<form method="post">
+					<?php wp_nonce_field( 'easy_php_settings_export_nonce' ); ?>
+					<button type="submit" name="easy_php_settings_export" class="button button-primary">
+						<span class="dashicons dashicons-download" style="vertical-align: middle; margin-top: 3px;"></span>
+						<?php esc_html_e( 'Export Settings', 'easy-php-settings' ); ?>
+					</button>
+				</form>
+			</div>
+
+			<div class="easy-php-settings-tool-section">
+				<h4>
+					<span class="dashicons dashicons-upload" style="color: #2271b1;"></span>
+					<?php esc_html_e( 'Import Configuration', 'easy-php-settings' ); ?>
+				</h4>
+				<p style="color: #646970; margin-bottom: 15px;">
+					<?php esc_html_e( 'Import settings from a previously exported JSON file. Your current settings will be automatically backed up before import.', 'easy-php-settings' ); ?>
+				</p>
+				<div class="easy-php-info-box" style="background: #fff3cd; border-left-color: #f0ad4e; margin-bottom: 15px;">
+					<p style="margin: 0; color: #646970;">
+						<span class="dashicons dashicons-warning" style="color: #f0ad4e;"></span>
+						<?php esc_html_e( 'Importing will overwrite your current settings. A backup will be created automatically.', 'easy-php-settings' ); ?>
+					</p>
+				</div>
+				<form method="post" enctype="multipart/form-data" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+					<?php wp_nonce_field( 'easy_php_settings_import_nonce' ); ?>
+					<input type="file" name="import_file" accept=".json" required style="flex: 1; min-width: 250px;">
+					<button type="submit" name="easy_php_settings_import" class="button button-secondary" onclick="return confirm('<?php echo esc_js( __( 'This will overwrite your current settings. A backup will be created. Continue?', 'easy-php-settings' ) ); ?>');">
+						<span class="dashicons dashicons-upload" style="vertical-align: middle; margin-top: 3px;"></span>
+						<?php esc_html_e( 'Import Settings', 'easy-php-settings' ); ?>
+					</button>
+				</form>
+			</div>
+
+			<div class="easy-php-settings-tool-section easy-php-settings-warning-box">
+				<h4>
+					<span class="dashicons dashicons-update" style="color: #f0ad4e;"></span>
+					<?php esc_html_e( 'Reset Configuration', 'easy-php-settings' ); ?>
+				</h4>
+				<p style="color: #646970; margin-bottom: 15px;">
+					<?php esc_html_e( 'Reset your PHP settings to recommended values or clear all customizations. A backup will be created automatically before any reset operation.', 'easy-php-settings' ); ?>
+				</p>
+				<div style="display: flex; gap: 10px; flex-wrap: wrap;">
+					<form method="post">
+						<?php wp_nonce_field( 'easy_php_settings_reset_nonce' ); ?>
+						<button type="submit" name="easy_php_settings_reset_recommended" class="button button-secondary" onclick="return confirm('<?php echo esc_js( __( 'Reset all settings to recommended values? Your current configuration will be backed up.', 'easy-php-settings' ) ); ?>');">
+							<span class="dashicons dashicons-yes-alt" style="vertical-align: middle; margin-top: 3px;"></span>
+							<?php esc_html_e( 'Reset to Recommended', 'easy-php-settings' ); ?>
+						</button>
+					</form>
+					<form method="post">
+						<?php wp_nonce_field( 'easy_php_settings_reset_nonce' ); ?>
+						<button type="submit" name="easy_php_settings_reset_default" class="button button-danger" onclick="return confirm('<?php echo esc_js( __( 'This will clear ALL custom settings and revert to server defaults. Your current configuration will be backed up. This action should only be used if you want to start fresh. Continue?', 'easy-php-settings' ) ); ?>');">
+							<span class="dashicons dashicons-dismiss" style="vertical-align: middle; margin-top: 3px;"></span>
+							<?php esc_html_e( 'Reset to Server Defaults', 'easy-php-settings' ); ?>
+						</button>
+					</form>
+				</div>
+			</div>
 		</div>
 		<?php
 	}

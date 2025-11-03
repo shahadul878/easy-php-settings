@@ -1,4 +1,66 @@
 jQuery(document).ready(function($) {
+    // Preset selection handler
+    $('#easy_php_settings_preset').on('change', function() {
+        var presetKey = $(this).val();
+        if (presetKey && window.easy_php_settingsAdminVars && window.easy_php_settingsAdminVars.presets) {
+            var preset = window.easy_php_settingsAdminVars.presets[presetKey];
+            if (preset) {
+                var fieldsPopulated = 0;
+                // Populate all settings fields with preset values
+                $.each(preset, function(key, value) {
+                    if (key !== 'name' && key !== 'description') {
+                        if (key === 'custom_php_ini') {
+                            // Handle custom php.ini textarea
+                            var textarea = $('#easy_php_settings_custom_php_ini');
+                            if (textarea.length) {
+                                textarea.val(value);
+                                fieldsPopulated++;
+                            }
+                        } else {
+                            // Handle regular input fields
+                            var input = $('input[name="easy_php_settings_settings[' + key + ']"]');
+                            if (input.length) {
+                                input.val(value);
+                                fieldsPopulated++;
+                            } else {
+                                console.log('Field not found: easy_php_settings_settings[' + key + ']');
+                            }
+                        }
+                    }
+                });
+                
+                if (fieldsPopulated > 0) {
+                    // Show professional notification
+                    var message = '<div class="notice notice-success is-dismissible" style="margin: 15px 0; padding: 12px;">' +
+                        '<p><strong>✓ Preset Applied Successfully!</strong></p>' +
+                        '<p>The <strong>' + preset.name + '</strong> configuration has been applied. ' +
+                        '<span class="status-badge ok">' + fieldsPopulated + ' Settings Updated</span></p>' +
+                        '<p style="margin-top: 10px;"><em>Click "Save All Settings" below to apply these changes.</em></p>' +
+                        '</div>';
+                    $('.easy-php-settings-preset-box').after(message);
+                    
+                    // Scroll to top to show the message
+                    $('html, body').animate({ scrollTop: 0 }, 300);
+                    
+                    // Auto-dismiss after 8 seconds
+                    setTimeout(function() {
+                        $('.notice-success').fadeOut(500, function() {
+                            $(this).remove();
+                        });
+                    }, 8000);
+                } else {
+                    console.error('No fields were populated');
+                    console.log('Available preset data:', preset);
+                    alert('Error: No settings were applied. Please check the browser console for details.');
+                }
+            } else {
+                console.error('Preset not found for key:', presetKey);
+            }
+        } else {
+            console.error('Preset data not available. Check easy_php_settingsAdminVars:', window.easy_php_settingsAdminVars);
+        }
+    });
+
     // Configuration Generator
     $('#generate-config').on('click', function() {
         var settings = {};
@@ -107,4 +169,138 @@ jQuery(document).ready(function($) {
             });
         }
     })();
+
+    // Extensions search functionality
+    var extensionsSearch = document.getElementById('extensions-search');
+    if (extensionsSearch) {
+        extensionsSearch.addEventListener('input', function() {
+            var filter = this.value.toLowerCase();
+            var extensionLists = document.querySelectorAll('.extensions-list');
+            extensionLists.forEach(function(list) {
+                var rows = list.getElementsByTagName('tr');
+                for (var i = 0; i < rows.length; i++) {
+                    var text = rows[i].textContent.toLowerCase();
+                    rows[i].style.display = text.indexOf(filter) > -1 ? '' : 'none';
+                }
+            });
+        });
+    }
+
+    // Add tooltips to settings fields
+    if (window.easy_php_settingsAdminVars && window.easy_php_settingsAdminVars.tooltips) {
+        $.each(window.easy_php_settingsAdminVars.tooltips, function(key, tooltip) {
+            var input = $('input[name="easy_php_settings_settings[' + key + ']"]');
+            if (input.length) {
+                var helpIcon = $('<span class="dashicons dashicons-editor-help" style="cursor: help; margin-left: 5px; color: #0073aa;" title="' + tooltip + '"></span>');
+                input.after(helpIcon);
+            }
+            // Also add to WP memory settings
+            var wpInput = $('input[name="easy_php_settings_wp_memory_settings[' + key + ']"]');
+            if (wpInput.length) {
+                var wpHelpIcon = $('<span class="dashicons dashicons-editor-help" style="cursor: help; margin-left: 5px; color: #0073aa;" title="' + tooltip + '"></span>');
+                wpInput.after(wpHelpIcon);
+            }
+        });
+    }
+
+    // Client-side validation
+    $('form').on('submit', function(e) {
+        var form = $(this);
+        
+        // Only validate if it's the settings form
+        if (!form.find('input[name^="easy_php_settings_settings"]').length) {
+            return true;
+        }
+
+        var warnings = [];
+        
+        // Get values
+        var postMaxSize = $('input[name="easy_php_settings_settings[post_max_size]"]').val();
+        var uploadMaxFilesize = $('input[name="easy_php_settings_settings[upload_max_filesize]"]').val();
+        var memoryLimit = $('input[name="easy_php_settings_settings[memory_limit]"]').val();
+        var maxExecutionTime = $('input[name="easy_php_settings_settings[max_execution_time]"]').val();
+
+        // Convert to bytes for comparison
+        function toBytes(val) {
+            if (!val) return 0;
+            var num = parseInt(val);
+            var unit = val.slice(-1).toUpperCase();
+            if (unit === 'G') return num * 1024 * 1024 * 1024;
+            if (unit === 'M') return num * 1024 * 1024;
+            if (unit === 'K') return num * 1024;
+            return num;
+        }
+
+        // Validation checks
+        if (postMaxSize && uploadMaxFilesize) {
+            if (toBytes(postMaxSize) < toBytes(uploadMaxFilesize)) {
+                warnings.push('Warning: post_max_size should be larger than upload_max_filesize.');
+            }
+        }
+
+        if (memoryLimit && postMaxSize) {
+            if (toBytes(memoryLimit) < toBytes(postMaxSize)) {
+                warnings.push('Warning: memory_limit should be larger than post_max_size.');
+            }
+        }
+
+        if (maxExecutionTime && parseInt(maxExecutionTime) < 30) {
+            warnings.push('Warning: max_execution_time is very low (less than 30 seconds) and may cause issues.');
+        }
+
+        if (memoryLimit && toBytes(memoryLimit) > 536870912) { // 512M
+            warnings.push('Notice: memory_limit is very high (over 512M). This may be excessive unless you have a specific need.');
+        }
+
+        // Show warnings if any
+        if (warnings.length > 0) {
+            var warningHtml = '<div style="max-width: 500px;">' +
+                '<h3 style="margin-top: 0; color: #d63638;">⚠ Configuration Warnings Detected</h3>' +
+                '<p style="margin-bottom: 15px;">The following issues were detected with your configuration:</p>' +
+                '<ul style="list-style: disc; padding-left: 20px; margin: 15px 0;">';
+            
+            warnings.forEach(function(warning) {
+                warningHtml += '<li style="margin: 8px 0;">' + warning + '</li>';
+            });
+            
+            warningHtml += '</ul>' +
+                '<p style="margin-top: 15px; font-weight: 600;">Do you want to save these settings anyway?</p>' +
+                '<p style="margin-top: 10px; color: #646970; font-size: 13px;"><em>Note: It\'s recommended to fix these issues for optimal performance.</em></p>' +
+                '</div>';
+            
+            // Create a more professional confirmation dialog
+            var proceed = confirm(
+                'Configuration Warnings Detected!\n\n' +
+                warnings.join('\n\n') +
+                '\n\nThese issues may affect your site\'s performance or functionality.\n\n' +
+                'Do you want to save anyway?'
+            );
+            
+            return proceed;
+        }
+
+        return true;
+    });
+
+    // Add dismiss functionality for notices
+    $(document).on('click', '.notice.is-dismissible .notice-dismiss, .notice.is-dismissible button.notice-dismiss', function(e) {
+        e.preventDefault();
+        $(this).closest('.notice').fadeOut(300, function() {
+            $(this).remove();
+        });
+    });
+
+    // Improve form submission feedback
+    $('form').on('submit', function() {
+        var submitButton = $(this).find('input[type="submit"], button[type="submit"]');
+        if (submitButton.length && !submitButton.hasClass('no-loading')) {
+            submitButton.prop('disabled', true);
+            var originalText = submitButton.val() || submitButton.text();
+            if (submitButton.is('button')) {
+                submitButton.html('<span class="dashicons dashicons-update-alt" style="animation: rotation 1s infinite linear; display: inline-block;"></span> ' + originalText);
+            } else {
+                submitButton.val('Processing...');
+            }
+        }
+    });
 }); 
