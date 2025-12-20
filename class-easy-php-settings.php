@@ -3,7 +3,7 @@
  * Plugin Name: Easy PHP Settings
  * Plugin URI:  https://github.com/easy-php-settings
  * Description: An easy way to manage common PHP INI settings from the WordPress admin panel.
- * Version:     1.0.4
+ * Version:     1.0.5
  * Author:      H M Shahadul Islam
  * Author URI:  https://github.com/shahadul878
  * License:     GPL-2.0+
@@ -23,6 +23,11 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-easyphpinfo.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easyinifile.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-settings-history.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-extensions-viewer.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-config-backup.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-config-parser.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-error-handler.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-settings-validator.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-settings-cache.php';
 
 /**
  * Class Easy_PHP_Settings
@@ -81,7 +86,7 @@ class Easy_PHP_Settings {
 	 *
 	 * @var string
 	 */
-	private $version = '1.0.4';
+	private $version = '1.0.5';
 
 	/**
 	 * Setting tooltips
@@ -393,7 +398,18 @@ upload_max_filesize = 512M',
 
 		foreach ( $this->settings_keys as $key ) {
 			if ( isset( $input[ $key ] ) ) {
-				$new_input[ $key ] = sanitize_text_field( $input[ $key ] );
+				$sanitized = Easy_Settings_Validator::sanitize_setting( $key, $input[ $key ] );
+				$validation = Easy_Settings_Validator::validate_setting( $key, $sanitized );
+				if ( is_wp_error( $validation ) ) {
+					Easy_Error_Handler::add_settings_error(
+						'easy_php_settings_settings',
+						'validation_error_' . $key,
+						$validation->get_error_message(),
+						'error'
+					);
+					continue;
+				}
+				$new_input[ $key ] = $sanitized;
 			}
 		}
 
@@ -402,15 +418,34 @@ upload_max_filesize = 512M',
 			$new_input['custom_php_ini'] = trim( $input['custom_php_ini'] );
 		}
 
-		// Validate settings and show warnings.
+		// Validate settings relationships and show warnings.
+		$relationship_errors = Easy_Settings_Validator::validate_settings_relationships( $new_input );
+		foreach ( $relationship_errors as $error ) {
+			add_settings_error( 'easy_php_settings_settings', 'relationship_warning', $error, 'warning' );
+		}
+
+		// Also run legacy validation for backward compatibility.
 		$this->validate_settings( $new_input );
 
 		// Track history.
 		Easy_Settings_History::add_entry( $old_input, $new_input, 'php_settings' );
 
+		// Invalidate cache when settings change.
+		Easy_Settings_Cache::invalidate( 'settings' );
+
 		// Auto-generate configuration files when settings are saved.
 		if ( ! empty( $new_input ) ) {
-			$this->generate_config_files( $new_input );
+			try {
+				$this->generate_config_files( $new_input );
+			} catch ( Exception $e ) {
+				Easy_Error_Handler::handle_exception( $e, 'generate_config_files' );
+				Easy_Error_Handler::add_settings_error(
+					'easy_php_settings_settings',
+					'config_generation_error',
+					__( 'Failed to generate configuration files. Please check error log.', 'easy-php-settings' ),
+					'error'
+				);
+			}
 		}
 
 		return $new_input;
@@ -428,7 +463,18 @@ upload_max_filesize = 512M',
 
 		foreach ( $this->wp_memory_settings_keys as $key ) {
 			if ( isset( $input[ $key ] ) ) {
-				$new_input[ $key ] = sanitize_text_field( $input[ $key ] );
+				$sanitized = Easy_Settings_Validator::sanitize_setting( $key, $input[ $key ] );
+				$validation = Easy_Settings_Validator::validate_wp_memory_setting( $key, $sanitized );
+				if ( is_wp_error( $validation ) ) {
+					Easy_Error_Handler::add_settings_error(
+						'easy_php_settings_wp_memory_settings',
+						'validation_error_' . $key,
+						$validation->get_error_message(),
+						'error'
+					);
+					continue;
+				}
+				$new_input[ $key ] = $sanitized;
 			}
 		}
 
@@ -437,7 +483,17 @@ upload_max_filesize = 512M',
 
 		// Update wp-config.php with WordPress memory settings.
 		if ( ! empty( $new_input ) ) {
-			$this->update_wp_memory_constants( $new_input );
+			try {
+				$this->update_wp_memory_constants( $new_input );
+			} catch ( Exception $e ) {
+				Easy_Error_Handler::handle_exception( $e, 'update_wp_memory_constants' );
+				Easy_Error_Handler::add_settings_error(
+					'easy_php_settings_wp_memory_settings',
+					'config_update_error',
+					__( 'Failed to update wp-config.php. Please check error log.', 'easy-php-settings' ),
+					'error'
+				);
+			}
 		}
 
 		return $new_input;
@@ -470,8 +526,14 @@ upload_max_filesize = 512M',
 		$files_written = EasyIniFile::write( $user_ini_content );
 
 		// Show success/error messages.
-		if ( ! empty( $files_written ) ) {
-
+		if ( is_wp_error( $files_written ) ) {
+			Easy_Error_Handler::add_settings_error(
+				'easy_php_settings_settings',
+				'config_files_error',
+				$files_written->get_error_message(),
+				'error'
+			);
+		} elseif ( ! empty( $files_written ) && is_array( $files_written ) ) {
 			$message = sprintf(
 			/* translators: %s: List of written INI file names. */
 				__( 'Settings saved and written to: %s. Please restart your web server for changes to take effect.', 'easy-php-settings' ),
@@ -496,8 +558,14 @@ upload_max_filesize = 512M',
 
 			$files_deleted = EasyIniFile::remove_files();
 
-			if ( ! empty( $files_deleted ) ) {
-
+			if ( is_wp_error( $files_deleted ) ) {
+				Easy_Error_Handler::add_settings_error(
+					'easy_php_settings_settings',
+					'files_deleted_error',
+					$files_deleted->get_error_message(),
+					'error'
+				);
+			} elseif ( ! empty( $files_deleted ) && is_array( $files_deleted ) ) {
 				$message = sprintf(
 				/* translators: %s: List of deleted INI file names. */
 					__( 'Successfully deleted: %s.', 'easy-php-settings' ),
@@ -527,7 +595,13 @@ upload_max_filesize = 512M',
 		$access        = $all_settings[ $key ]['access'] ?? 0;
 		$is_changeable = ( INI_USER === $access || INI_ALL === $access );
 
-		echo "<input type='text' name='easy_php_settings_settings[" . esc_attr( $key ) . "]' value='" . esc_attr( $value ) . "' class='regular-text' placeholder='" . esc_attr( $this->recommended_values[ $key ] ?? '' ) . "'>";
+		$field_id = 'easy_php_settings_' . esc_attr( $key );
+		$aria_label = sprintf(
+			/* translators: %s: Setting name */
+			__( 'Enter value for %s', 'easy-php-settings' ),
+			esc_attr( $key )
+		);
+		echo "<input type='text' id='" . esc_attr( $field_id ) . "' name='easy_php_settings_settings[" . esc_attr( $key ) . "]' value='" . esc_attr( $value ) . "' class='regular-text' placeholder='" . esc_attr( $this->recommended_values[ $key ] ?? '' ) . "' aria-label='" . esc_attr( $aria_label ) . "' aria-describedby='" . esc_attr( $field_id ) . '_description">';
 
 		$this->render_status_indicator( $key, $current_value );
 
@@ -551,7 +625,13 @@ upload_max_filesize = 512M',
 		$value         = isset( $options[ $key ] ) ? $options[ $key ] : '';
 		$current_value = $this->get_wp_memory_value( $key );
 
-		echo "<input type='text' name='easy_php_settings_wp_memory_settings[" . esc_attr( $key ) . "]' value='" . esc_attr( $value ) . "' class='regular-text' placeholder='" . esc_attr( $this->wp_memory_recommended_values[ $key ] ?? '' ) . "'>";
+		$field_id = 'easy_php_settings_wp_memory_' . esc_attr( $key );
+		$aria_label = sprintf(
+			/* translators: %s: Setting name */
+			__( 'Enter value for %s', 'easy-php-settings' ),
+			esc_attr( $key )
+		);
+		echo "<input type='text' id='" . esc_attr( $field_id ) . "' name='easy_php_settings_wp_memory_settings[" . esc_attr( $key ) . "]' value='" . esc_attr( $value ) . "' class='regular-text' placeholder='" . esc_attr( $this->wp_memory_recommended_values[ $key ] ?? '' ) . "' aria-label='" . esc_attr( $aria_label ) . "' aria-describedby='" . esc_attr( $field_id ) . '_description">';
 
 		$this->render_wp_memory_status_indicator( $key, $current_value );
 	}
@@ -564,6 +644,7 @@ upload_max_filesize = 512M',
 	 * @return void
 	 */
 	private function render_status_indicator( $key, $current_value ) {
+		$field_id = 'easy_php_settings_' . esc_attr( $key );
 		/* translators: %s: Current PHP value */
 		$description = sprintf( esc_html__( 'Current value: %s', 'easy-php-settings' ), esc_html( $current_value ) );
 		if ( isset( $this->recommended_values[ $key ] ) ) {
@@ -576,12 +657,12 @@ upload_max_filesize = 512M',
 			$recommended_val_bytes = $this->convert_to_bytes( $recommended_value_str );
 
 			if ( $current_val_bytes < $recommended_val_bytes ) {
-				$description .= ' <span style="color: red;">' . esc_html__( '(Low)', 'easy-php-settings' ) . '</span>';
+				$description .= ' <span style="color: red;" aria-label="' . esc_attr__( 'Low value', 'easy-php-settings' ) . '">' . esc_html__( '(Low)', 'easy-php-settings' ) . '</span>';
 			} else {
-				$description .= ' <span style="color: green;">' . esc_html__( '(OK)', 'easy-php-settings' ) . '</span>';
+				$description .= ' <span style="color: green;" aria-label="' . esc_attr__( 'OK value', 'easy-php-settings' ) . '">' . esc_html__( '(OK)', 'easy-php-settings' ) . '</span>';
 			}
 		}
-		echo '<p class="description">' . wp_kses_post( $description ) . '</p>';
+		echo '<p class="description" id="' . esc_attr( $field_id ) . '_description" role="status">' . wp_kses_post( $description ) . '</p>';
 	}
 
 	/**
@@ -609,6 +690,7 @@ upload_max_filesize = 512M',
 	 * @return void
 	 */
 	private function render_wp_memory_status_indicator( $key, $current_value ) {
+		$field_id = 'easy_php_settings_wp_memory_' . esc_attr( $key );
 		/* translators: %s: Current WordPress memory value */
 		$description = sprintf( esc_html__( 'Current value: %s', 'easy-php-settings' ), esc_html( $current_value ) );
 		if ( isset( $this->wp_memory_recommended_values[ $key ] ) ) {
@@ -621,12 +703,12 @@ upload_max_filesize = 512M',
 			$recommended_val_bytes = $this->convert_to_bytes( $recommended_value_str );
 
 			if ( $current_val_bytes < $recommended_val_bytes ) {
-				$description .= ' <span style="color: red;">' . esc_html__( '(Low)', 'easy-php-settings' ) . '</span>';
+				$description .= ' <span style="color: red;" aria-label="' . esc_attr__( 'Low value', 'easy-php-settings' ) . '">' . esc_html__( '(Low)', 'easy-php-settings' ) . '</span>';
 			} else {
-				$description .= ' <span style="color: green;">' . esc_html__( '(OK)', 'easy-php-settings' ) . '</span>';
+				$description .= ' <span style="color: green;" aria-label="' . esc_attr__( 'OK value', 'easy-php-settings' ) . '">' . esc_html__( '(OK)', 'easy-php-settings' ) . '</span>';
 			}
 		}
-		echo '<p class="description">' . wp_kses_post( $description ) . '</p>';
+		echo '<p class="description" id="' . esc_attr( $field_id ) . '_description" role="status">' . wp_kses_post( $description ) . '</p>';
 	}
 
 	/**
@@ -829,40 +911,82 @@ upload_max_filesize = 512M',
 			}
 
 			if ( ! isset( $_FILES['import_file'] ) || empty( $_FILES['import_file']['tmp_name'] ) ) {
-				add_settings_error( 'easy_php_settings_settings', 'import_no_file', __( 'No file selected for import.', 'easy-php-settings' ), 'error' );
+				Easy_Error_Handler::add_settings_error(
+					'easy_php_settings_settings',
+					'import_no_file',
+					__( 'No file selected for import.', 'easy-php-settings' ),
+					'error'
+				);
 				return;
 			}
 
-			global $wp_filesystem;
-			if ( ! $wp_filesystem ) {
-				require_once ABSPATH . 'wp-admin/includes/file.php';
-				WP_Filesystem();
+			try {
+				// Validate uploaded file.
+				$file_validation = Easy_Settings_Validator::validate_import_file( $_FILES['import_file'] );
+				if ( is_wp_error( $file_validation ) ) {
+					throw new Exception( $file_validation->get_error_message() );
+				}
+
+				global $wp_filesystem;
+				if ( ! $wp_filesystem ) {
+					require_once ABSPATH . 'wp-admin/includes/file.php';
+					WP_Filesystem();
+				}
+
+				$json_data = $wp_filesystem->get_contents( $_FILES['import_file']['tmp_name'] );
+				if ( false === $json_data ) {
+					throw new Exception( __( 'Failed to read import file.', 'easy-php-settings' ) );
+				}
+
+				$settings = json_decode( $json_data, true );
+				if ( ! $settings || ! is_array( $settings ) ) {
+					throw new Exception( __( 'Invalid settings file format.', 'easy-php-settings' ) );
+				}
+
+				// Validate imported settings.
+				if ( isset( $settings['php_settings'] ) && is_array( $settings['php_settings'] ) ) {
+					foreach ( $settings['php_settings'] as $key => $value ) {
+						if ( in_array( $key, $this->settings_keys, true ) ) {
+							$validation = Easy_Settings_Validator::validate_setting( $key, $value );
+							if ( is_wp_error( $validation ) ) {
+								throw new Exception( sprintf( __( 'Invalid value for %s: %s', 'easy-php-settings' ), $key, $validation->get_error_message() ) );
+							}
+						}
+					}
+				}
+
+				// Create backup before importing.
+				$backup = array(
+					'php_settings' => $this->get_option( 'easy_php_settings_settings', array() ),
+					'wp_memory'    => $this->get_option( 'easy_php_settings_wp_memory_settings', array() ),
+				);
+				$this->update_option( 'easy_php_settings_import_backup', $backup );
+
+				// Import settings.
+				if ( isset( $settings['php_settings'] ) ) {
+					$this->update_option( 'easy_php_settings_settings', $settings['php_settings'] );
+					Easy_Settings_Cache::invalidate( 'settings' );
+				}
+				if ( isset( $settings['wp_memory'] ) ) {
+					$this->update_option( 'easy_php_settings_wp_memory_settings', $settings['wp_memory'] );
+				}
+
+				add_settings_error(
+					'easy_php_settings_settings',
+					'import_success',
+					__( 'Settings imported successfully. A backup of your previous settings was created.', 'easy-php-settings' ),
+					'updated'
+				);
+
+			} catch ( Exception $e ) {
+				Easy_Error_Handler::handle_exception( $e, 'handle_export_import' );
+				Easy_Error_Handler::add_settings_error(
+					'easy_php_settings_settings',
+					'import_error',
+					__( 'Failed to import settings. Please check error log.', 'easy-php-settings' ),
+					'error'
+				);
 			}
-
-			$json_data = $wp_filesystem->get_contents( $_FILES['import_file']['tmp_name'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-			$settings  = json_decode( $json_data, true );
-
-			if ( ! $settings || ! is_array( $settings ) ) {
-				add_settings_error( 'easy_php_settings_settings', 'import_invalid', __( 'Invalid settings file format.', 'easy-php-settings' ), 'error' );
-				return;
-			}
-
-			// Create backup before importing.
-			$backup = array(
-				'php_settings' => $this->get_option( 'easy_php_settings_settings', array() ),
-				'wp_memory'    => $this->get_option( 'easy_php_settings_wp_memory_settings', array() ),
-			);
-			$this->update_option( 'easy_php_settings_import_backup', $backup );
-
-			// Import settings.
-			if ( isset( $settings['php_settings'] ) ) {
-				$this->update_option( 'easy_php_settings_settings', $settings['php_settings'] );
-			}
-			if ( isset( $settings['wp_memory'] ) ) {
-				$this->update_option( 'easy_php_settings_wp_memory_settings', $settings['wp_memory'] );
-			}
-
-			add_settings_error( 'easy_php_settings_settings', 'import_success', __( 'Settings imported successfully. A backup of your previous settings was created.', 'easy-php-settings' ), 'updated' );
 		}
 	}
 
@@ -1487,7 +1611,14 @@ error_reporting = E_ALL & ~E_DEPRECATED"><?php echo isset( $options['custom_php_
 	 * @return void
 	 */
 	public function render_history_tab() {
-		$history = Easy_Settings_History::get_history();
+		// Pagination parameters.
+		$per_page = 20;
+		$current_page = isset( $_GET['history_page'] ) ? max( 1, intval( $_GET['history_page'] ) ) : 1;
+		$offset = ( $current_page - 1 ) * $per_page;
+
+		$total_count = Easy_Settings_History::get_history_count();
+		$history = Easy_Settings_History::get_history( $per_page, $offset );
+		$total_pages = ceil( $total_count / $per_page );
 		?>
 		<div id="history-tab">
 			<h3><?php esc_html_e( 'Settings Change History', 'easy-php-settings' ); ?></h3>
@@ -1544,6 +1675,37 @@ error_reporting = E_ALL & ~E_DEPRECATED"><?php echo isset( $options['custom_php_
 						<?php endforeach; ?>
 					</tbody>
 				</table>
+
+				<?php if ( $total_pages > 1 ) : ?>
+				<div class="tablenav">
+					<div class="tablenav-pages">
+						<span class="displaying-num">
+							<?php
+							printf(
+								/* translators: %d: Total number of items */
+								esc_html( _n( '%d item', '%d items', $total_count, 'easy-php-settings' ) ),
+								esc_html( $total_count )
+							);
+							?>
+						</span>
+						<?php
+						$page_links = paginate_links(
+							array(
+								'base'      => add_query_arg( 'history_page', '%#%' ),
+								'format'    => '',
+								'prev_text' => __( '&laquo;', 'easy-php-settings' ),
+								'next_text' => __( '&raquo;', 'easy-php-settings' ),
+								'total'     => $total_pages,
+								'current'   => $current_page,
+							)
+						);
+						if ( $page_links ) {
+							echo '<span class="pagination-links">' . wp_kses_post( $page_links ) . '</span>';
+						}
+						?>
+					</div>
+				</div>
+				<?php endif; ?>
 			<?php endif; ?>
 		</div>
 		<?php
@@ -1743,31 +1905,86 @@ error_reporting = E_ALL & ~E_DEPRECATED"><?php echo isset( $options['custom_php_
 
 		$config_path = ABSPATH . 'wp-config.php';
 		if ( ! $wp_filesystem->is_writable( $config_path ) ) {
-			add_settings_error( 'easy_php_settings_debugging_settings', 'config_not_writable', __( 'wp-config.php is not writable.', 'easy-php-settings' ), 'error' );
+			Easy_Error_Handler::add_settings_error(
+				'easy_php_settings_debugging_settings',
+				'config_not_writable',
+				__( 'wp-config.php is not writable.', 'easy-php-settings' ),
+				'error'
+			);
 			return get_option( 'easy_php_settings_debugging_settings' );
 		}
 
-		$config_content = $wp_filesystem->get_contents( $config_path );
-		$constants      = array( 'WP_DEBUG', 'WP_DEBUG_LOG', 'WP_DEBUG_DISPLAY', 'SCRIPT_DEBUG' );
-
-		$new_options = get_option( 'easy_php_settings_debugging_settings', array() );
-
-		foreach ( $constants as $const ) {
-			$key   = strtolower( $const );
-			$value = isset( $input[ $key ] ) ? 'true' : 'false';
-
-			if ( preg_match( '/define\(\s*\'' . $const . '\'\s*,\s*(true|false)\s*\);/i', $config_content ) ) {
-				$config_content = preg_replace( '/define\(\s*\'' . $const . '\'\s*,\s*(true|false)\s*\);/i', "define( '$const', $value );", $config_content );
-			} else {
-				$config_content = str_replace( "/* That's all, stop editing!", "define( '$const', $value );\n\n/* That's all, stop editing!", $config_content );
-			}
-
-			$new_options[ $key ] = 'true' === $value;
+		// Create backup before modification.
+		$backup_result = Easy_Config_Backup::create_backup();
+		if ( is_wp_error( $backup_result ) ) {
+			Easy_Error_Handler::log_error(
+				$backup_result->get_error_message(),
+				'create_backup',
+				'warning'
+			);
+			// Continue anyway, but log the warning.
 		}
 
-		$wp_filesystem->put_contents( $config_path, $config_content );
+		try {
+			$config_content = $wp_filesystem->get_contents( $config_path );
+			if ( false === $config_content ) {
+				throw new Exception( __( 'Failed to read wp-config.php file.', 'easy-php-settings' ) );
+			}
 
-		add_settings_error( 'easy_php_settings_debugging_settings', 'settings_updated', __( 'Debugging settings updated successfully.', 'easy-php-settings' ), 'updated' );
+			$constants      = array( 'WP_DEBUG', 'WP_DEBUG_LOG', 'WP_DEBUG_DISPLAY', 'SCRIPT_DEBUG' );
+			$new_options     = get_option( 'easy_php_settings_debugging_settings', array() );
+			$original_content = $config_content;
+
+			foreach ( $constants as $const ) {
+				$key   = strtolower( $const );
+				$value = isset( $input[ $key ] ) ? true : false;
+
+				$result = Easy_Config_Parser::update_constant( $config_content, $const, $value, 'bool' );
+				if ( is_wp_error( $result ) ) {
+					throw new Exception( $result->get_error_message() );
+				}
+				$config_content = $result;
+				$new_options[ $key ] = $value;
+			}
+
+			// Validate the modified content.
+			$validation = Easy_Config_Backup::validate_config_structure( $config_content );
+			if ( is_wp_error( $validation ) ) {
+				// Restore from backup if validation fails.
+				$latest_backup = Easy_Config_Backup::get_latest_backup();
+				if ( $latest_backup ) {
+					Easy_Config_Backup::restore_backup( $latest_backup['key'] );
+				}
+				throw new Exception( $validation->get_error_message() );
+			}
+
+			// Write the modified content.
+			$write_result = $wp_filesystem->put_contents( $config_path, $config_content );
+			if ( ! $write_result ) {
+				// Restore from backup if write fails.
+				$latest_backup = Easy_Config_Backup::get_latest_backup();
+				if ( $latest_backup ) {
+					Easy_Config_Backup::restore_backup( $latest_backup['key'] );
+				}
+				throw new Exception( __( 'Failed to write wp-config.php file.', 'easy-php-settings' ) );
+			}
+
+			add_settings_error(
+				'easy_php_settings_debugging_settings',
+				'settings_updated',
+				__( 'Debugging settings updated successfully.', 'easy-php-settings' ),
+				'updated'
+			);
+
+		} catch ( Exception $e ) {
+			Easy_Error_Handler::handle_exception( $e, 'update_wp_config_constants' );
+			Easy_Error_Handler::add_settings_error(
+				'easy_php_settings_debugging_settings',
+				'config_update_error',
+				__( 'Failed to update wp-config.php. Please check error log.', 'easy-php-settings' ),
+				'error'
+			);
+		}
 
 		return $new_options;
 	}
@@ -1787,29 +2004,83 @@ error_reporting = E_ALL & ~E_DEPRECATED"><?php echo isset( $options['custom_php_
 
 		$config_path = ABSPATH . 'wp-config.php';
 		if ( ! $wp_filesystem->is_writable( $config_path ) ) {
-			add_settings_error( 'easy_php_settings_wp_memory_settings', 'config_not_writable', __( 'wp-config.php is not writable.', 'easy-php-settings' ), 'error' );
+			Easy_Error_Handler::add_settings_error(
+				'easy_php_settings_wp_memory_settings',
+				'config_not_writable',
+				__( 'wp-config.php is not writable.', 'easy-php-settings' ),
+				'error'
+			);
 			return;
 		}
 
-		$config_content = $wp_filesystem->get_contents( $config_path );
-		$constants      = array( 'WP_MEMORY_LIMIT', 'WP_MAX_MEMORY_LIMIT' );
-
-		foreach ( $constants as $const ) {
-			$key = strtolower( $const );
-			if ( isset( $input[ $key ] ) && ! empty( $input[ $key ] ) ) {
-				$value = "'" . $input[ $key ] . "'";
-
-				if ( preg_match( '/define\(\s*\'' . $const . '\'\s*,\s*\'.*?\'\s*\);/i', $config_content ) ) {
-					$config_content = preg_replace( '/define\(\s*\'' . $const . '\'\s*,\s*\'.*?\'\s*\);/i', "define( '$const', $value );", $config_content );
-				} else {
-					$config_content = str_replace( "/* That's all, stop editing!", "define( '$const', $value );\n\n/* That's all, stop editing!", $config_content );
-				}
-			}
+		// Create backup before modification.
+		$backup_result = Easy_Config_Backup::create_backup();
+		if ( is_wp_error( $backup_result ) ) {
+			Easy_Error_Handler::log_error(
+				$backup_result->get_error_message(),
+				'create_backup',
+				'warning'
+			);
+			// Continue anyway, but log the warning.
 		}
 
-		$wp_filesystem->put_contents( $config_path, $config_content );
+		try {
+			$config_content = $wp_filesystem->get_contents( $config_path );
+			if ( false === $config_content ) {
+				throw new Exception( __( 'Failed to read wp-config.php file.', 'easy-php-settings' ) );
+			}
 
-		add_settings_error( 'easy_php_settings_wp_memory_settings', 'wp_memory_updated', __( 'WordPress memory settings updated successfully in wp-config.php.', 'easy-php-settings' ), 'updated' );
+			$constants = array( 'WP_MEMORY_LIMIT', 'WP_MAX_MEMORY_LIMIT' );
+
+			foreach ( $constants as $const ) {
+				$key = strtolower( $const );
+				if ( isset( $input[ $key ] ) && ! empty( $input[ $key ] ) ) {
+					$result = Easy_Config_Parser::update_constant( $config_content, $const, $input[ $key ], 'string' );
+					if ( is_wp_error( $result ) ) {
+						throw new Exception( $result->get_error_message() );
+					}
+					$config_content = $result;
+				}
+			}
+
+			// Validate the modified content.
+			$validation = Easy_Config_Backup::validate_config_structure( $config_content );
+			if ( is_wp_error( $validation ) ) {
+				// Restore from backup if validation fails.
+				$latest_backup = Easy_Config_Backup::get_latest_backup();
+				if ( $latest_backup ) {
+					Easy_Config_Backup::restore_backup( $latest_backup['key'] );
+				}
+				throw new Exception( $validation->get_error_message() );
+			}
+
+			// Write the modified content.
+			$write_result = $wp_filesystem->put_contents( $config_path, $config_content );
+			if ( ! $write_result ) {
+				// Restore from backup if write fails.
+				$latest_backup = Easy_Config_Backup::get_latest_backup();
+				if ( $latest_backup ) {
+					Easy_Config_Backup::restore_backup( $latest_backup['key'] );
+				}
+				throw new Exception( __( 'Failed to write wp-config.php file.', 'easy-php-settings' ) );
+			}
+
+			add_settings_error(
+				'easy_php_settings_wp_memory_settings',
+				'wp_memory_updated',
+				__( 'WordPress memory settings updated successfully in wp-config.php.', 'easy-php-settings' ),
+				'updated'
+			);
+
+		} catch ( Exception $e ) {
+			Easy_Error_Handler::handle_exception( $e, 'update_wp_memory_constants' );
+			Easy_Error_Handler::add_settings_error(
+				'easy_php_settings_wp_memory_settings',
+				'config_update_error',
+				__( 'Failed to update wp-config.php. Please check error log.', 'easy-php-settings' ),
+				'error'
+			);
+		}
 	}
 
 	/**

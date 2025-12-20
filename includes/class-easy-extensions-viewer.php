@@ -40,6 +40,12 @@ class Easy_Extensions_Viewer {
 	 * @return array
 	 */
 	public static function get_categorized_extensions() {
+		// Check cache first.
+		$cached = Easy_Settings_Cache::get( 'extensions' );
+		if ( false !== $cached ) {
+			return $cached;
+		}
+
 		$loaded = self::get_loaded_extensions();
 
 		$categories = array(
@@ -81,6 +87,9 @@ class Easy_Extensions_Viewer {
 				unset( $categorized[ $category ] );
 			}
 		}
+
+		// Cache the result.
+		Easy_Settings_Cache::set( 'extensions', $categorized );
 
 		return $categorized;
 	}

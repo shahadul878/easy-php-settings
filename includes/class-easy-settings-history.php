@@ -83,7 +83,14 @@ class Easy_Settings_History {
 				$history = array_slice( $history, 0, self::MAX_HISTORY_ENTRIES );
 			}
 
-			return self::save_history( $history );
+			$saved = self::save_history( $history );
+
+			// Invalidate cache when history changes.
+			if ( $saved ) {
+				Easy_Settings_Cache::invalidate( 'history' );
+			}
+
+			return $saved;
 		}
 
 		return false;
@@ -92,13 +99,46 @@ class Easy_Settings_History {
 	/**
 	 * Get history
 	 *
+	 * @param int $limit Maximum number of entries to return (0 for all).
+	 * @param int $offset Offset for pagination.
 	 * @return array
 	 */
-	public static function get_history() {
-		if ( is_multisite() ) {
-			return get_site_option( self::HISTORY_OPTION_KEY, array() );
+	public static function get_history( $limit = 0, $offset = 0 ) {
+		// Check cache first if no pagination.
+		if ( 0 === $limit && 0 === $offset ) {
+			$cached = Easy_Settings_Cache::get( 'history' );
+			if ( false !== $cached ) {
+				return $cached;
+			}
 		}
-		return get_option( self::HISTORY_OPTION_KEY, array() );
+
+		$history = is_multisite() ? get_site_option( self::HISTORY_OPTION_KEY, array() ) : get_option( self::HISTORY_OPTION_KEY, array() );
+
+		if ( ! is_array( $history ) ) {
+			return array();
+		}
+
+		// Apply pagination if limit is set.
+		if ( $limit > 0 ) {
+			$history = array_slice( $history, $offset, $limit );
+		}
+
+		// Cache full history if no pagination.
+		if ( 0 === $limit && 0 === $offset ) {
+			Easy_Settings_Cache::set( 'history', $history );
+		}
+
+		return $history;
+	}
+
+	/**
+	 * Get total number of history entries
+	 *
+	 * @return int
+	 */
+	public static function get_history_count() {
+		$history = is_multisite() ? get_site_option( self::HISTORY_OPTION_KEY, array() ) : get_option( self::HISTORY_OPTION_KEY, array() );
+		return is_array( $history ) ? count( $history ) : 0;
 	}
 
 	/**
@@ -120,10 +160,14 @@ class Easy_Settings_History {
 	 * @return bool
 	 */
 	public static function clear_history() {
-		if ( is_multisite() ) {
-			return delete_site_option( self::HISTORY_OPTION_KEY );
+		$deleted = is_multisite() ? delete_site_option( self::HISTORY_OPTION_KEY ) : delete_option( self::HISTORY_OPTION_KEY );
+
+		// Invalidate cache.
+		if ( $deleted ) {
+			Easy_Settings_Cache::invalidate( 'history' );
 		}
-		return delete_option( self::HISTORY_OPTION_KEY );
+
+		return $deleted;
 	}
 
 	/**

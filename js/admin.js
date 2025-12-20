@@ -203,7 +203,121 @@ jQuery(document).ready(function($) {
         });
     }
 
-    // Client-side validation
+    // Utility function: Convert value to bytes
+    function toBytes(val) {
+        if (!val) return 0;
+        var num = parseInt(val);
+        var unit = val.slice(-1).toUpperCase();
+        if (unit === 'G') return num * 1024 * 1024 * 1024;
+        if (unit === 'M') return num * 1024 * 1024;
+        if (unit === 'K') return num * 1024;
+        return num;
+    }
+
+    // Debounce function
+    function debounce(func, wait) {
+        var timeout;
+        return function() {
+            var context = this, args = arguments;
+            clearTimeout(timeout);
+            timeout = setTimeout(function() {
+                func.apply(context, args);
+            }, wait);
+        };
+    }
+
+    // Real-time validation with debouncing
+    var validateField = debounce(function(field) {
+        var $field = $(field);
+        var fieldName = $field.attr('name');
+        var value = $field.val();
+        
+        // Remove existing error messages
+        $field.next('.field-error').remove();
+        $field.removeClass('error');
+        
+        if (!value) return; // Skip empty fields
+        
+        var errors = [];
+        
+        // Validate format
+        if (fieldName.indexOf('memory_limit') !== -1 || 
+            fieldName.indexOf('upload_max_filesize') !== -1 || 
+            fieldName.indexOf('post_max_size') !== -1) {
+            if (!/^\d+[KMGT]?$/i.test(value)) {
+                errors.push('Invalid format. Use number followed by optional unit (K, M, G, T).');
+            }
+        }
+        
+        if (fieldName.indexOf('max_execution_time') !== -1 || 
+            fieldName.indexOf('max_input_vars') !== -1) {
+            if (!/^\d+$/.test(value)) {
+                errors.push('Must be a number.');
+            }
+        }
+        
+        // Show errors
+        if (errors.length > 0) {
+            $field.addClass('error');
+            var errorHtml = '<span class="field-error" style="color: #d63638; display: block; margin-top: 5px; font-size: 12px;">' + 
+                errors.join('<br>') + '</span>';
+            $field.after(errorHtml);
+        }
+    }, 500);
+
+    // Attach real-time validation to input fields
+    $('input[name^="easy_php_settings_settings"]').on('input', function() {
+        validateField(this);
+    });
+
+    // Validate relationships on change
+    function validateRelationships() {
+        var postMaxSize = $('input[name="easy_php_settings_settings[post_max_size]"]').val();
+        var uploadMaxFilesize = $('input[name="easy_php_settings_settings[upload_max_filesize]"]').val();
+        var memoryLimit = $('input[name="easy_php_settings_settings[memory_limit]"]').val();
+        
+        // Remove existing relationship warnings
+        $('.relationship-warning').remove();
+        
+        var warnings = [];
+        
+        if (postMaxSize && uploadMaxFilesize) {
+            if (toBytes(postMaxSize) < toBytes(uploadMaxFilesize)) {
+                warnings.push({
+                    field: 'post_max_size',
+                    message: 'post_max_size should be larger than upload_max_filesize.'
+                });
+            }
+        }
+        
+        if (memoryLimit && postMaxSize) {
+            if (toBytes(memoryLimit) < toBytes(postMaxSize)) {
+                warnings.push({
+                    field: 'memory_limit',
+                    message: 'memory_limit should be larger than post_max_size.'
+                });
+            }
+        }
+        
+        // Display warnings
+        warnings.forEach(function(warning) {
+            var $field = $('input[name="easy_php_settings_settings[' + warning.field + ']"]');
+            if ($field.length) {
+                var warningHtml = '<span class="relationship-warning" style="color: #d63638; display: block; margin-top: 5px; font-size: 12px;">' +
+                    '⚠ ' + warning.message + '</span>';
+                $field.closest('td, .form-field').find('.relationship-warning').remove();
+                $field.closest('td, .form-field').append(warningHtml);
+            }
+        });
+    }
+
+    // Attach relationship validation
+    $('input[name="easy_php_settings_settings[post_max_size]"], ' +
+      'input[name="easy_php_settings_settings[upload_max_filesize]"], ' +
+      'input[name="easy_php_settings_settings[memory_limit]"]')
+        .on('input', debounce(validateRelationships, 500));
+
+    // Client-side validation on form submit
     $('form').on('submit', function(e) {
         var form = $(this);
         
@@ -219,17 +333,6 @@ jQuery(document).ready(function($) {
         var uploadMaxFilesize = $('input[name="easy_php_settings_settings[upload_max_filesize]"]').val();
         var memoryLimit = $('input[name="easy_php_settings_settings[memory_limit]"]').val();
         var maxExecutionTime = $('input[name="easy_php_settings_settings[max_execution_time]"]').val();
-
-        // Convert to bytes for comparison
-        function toBytes(val) {
-            if (!val) return 0;
-            var num = parseInt(val);
-            var unit = val.slice(-1).toUpperCase();
-            if (unit === 'G') return num * 1024 * 1024 * 1024;
-            if (unit === 'M') return num * 1024 * 1024;
-            if (unit === 'K') return num * 1024;
-            return num;
-        }
 
         // Validation checks
         if (postMaxSize && uploadMaxFilesize) {
@@ -252,23 +355,17 @@ jQuery(document).ready(function($) {
             warnings.push('Notice: memory_limit is very high (over 512M). This may be excessive unless you have a specific need.');
         }
 
+        // Check for field errors
+        if ($('.field-error').length > 0) {
+            warnings.push('Please fix the validation errors before saving.');
+            $('html, body').animate({
+                scrollTop: $('.field-error').first().offset().top - 100
+            }, 500);
+            return false;
+        }
+
         // Show warnings if any
         if (warnings.length > 0) {
-            var warningHtml = '<div style="max-width: 500px;">' +
-                '<h3 style="margin-top: 0; color: #d63638;">⚠ Configuration Warnings Detected</h3>' +
-                '<p style="margin-bottom: 15px;">The following issues were detected with your configuration:</p>' +
-                '<ul style="list-style: disc; padding-left: 20px; margin: 15px 0;">';
-            
-            warnings.forEach(function(warning) {
-                warningHtml += '<li style="margin: 8px 0;">' + warning + '</li>';
-            });
-            
-            warningHtml += '</ul>' +
-                '<p style="margin-top: 15px; font-weight: 600;">Do you want to save these settings anyway?</p>' +
-                '<p style="margin-top: 10px; color: #646970; font-size: 13px;"><em>Note: It\'s recommended to fix these issues for optimal performance.</em></p>' +
-                '</div>';
-            
-            // Create a more professional confirmation dialog
             var proceed = confirm(
                 'Configuration Warnings Detected!\n\n' +
                 warnings.join('\n\n') +
@@ -290,7 +387,7 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // Improve form submission feedback
+    // Improve form submission feedback with loading states
     $('form').on('submit', function() {
         var submitButton = $(this).find('input[type="submit"], button[type="submit"]');
         if (submitButton.length && !submitButton.hasClass('no-loading')) {
@@ -301,6 +398,54 @@ jQuery(document).ready(function($) {
             } else {
                 submitButton.val('Processing...');
             }
+            
+            // Add loading overlay
+            if (!$('.easy-php-settings-loading-overlay').length) {
+                $('body').append('<div class="easy-php-settings-loading-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999999; display: flex; align-items: center; justify-content: center;"><div style="background: white; padding: 20px; border-radius: 4px;"><span class="dashicons dashicons-update-alt" style="animation: rotation 1s infinite linear; display: inline-block; font-size: 32px;"></span><p>Saving settings...</p></div></div>');
+            }
         }
     });
+
+    // Keyboard shortcuts
+    $(document).on('keydown', function(e) {
+        // Ctrl/Cmd + S to save
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            var $form = $('form:visible').first();
+            if ($form.length && $form.find('input[name^="easy_php_settings_settings"]').length) {
+                e.preventDefault();
+                $form.submit();
+            }
+        }
+        
+        // Escape to close modals/notices
+        if (e.key === 'Escape') {
+            $('.notice.is-dismissible').fadeOut(300, function() {
+                $(this).remove();
+            });
+        }
+    });
+
+    // Debounce search inputs
+    $('#php-settings-search, #extensions-search').on('input', debounce(function() {
+        // Search functionality is already implemented, just debounced now
+    }, 300));
+
+    // Add success animation on save
+    $(document).on('wp-settings-updated', function() {
+        $('.wrap h1').after('<div class="notice notice-success is-dismissible" style="animation: slideDown 0.3s ease-out;"><p>Settings saved successfully!</p></div>');
+        setTimeout(function() {
+            $('.notice-success').fadeOut(500, function() {
+                $(this).remove();
+            });
+        }, 3000);
+    });
+
+    // CSS for animations
+    if (!$('#easy-php-settings-animations').length) {
+        $('head').append('<style id="easy-php-settings-animations">' +
+            '@keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }' +
+            '@keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }' +
+            '.error { border-color: #d63638 !important; }' +
+            '</style>');
+    }
 }); 

@@ -37,6 +37,14 @@ class EasyPHPInfo {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return array();
 		}
+
+		// Check cache first.
+		$cached = Easy_Settings_Cache::get( 'php_info' );
+		if ( false !== $cached ) {
+			self::$info_array = $cached;
+			return self::$info_array;
+		}
+
 		if ( ! isset( self::$info_array ) ) {
 			ob_start();
             // phpcs:ignore WordPress.PHP.DevelopmentFunctions.prevent_path_disclosure_phpinfo
@@ -106,6 +114,9 @@ class EasyPHPInfo {
 			}
 
 			self::$info_array = $pi;
+
+			// Cache the result.
+			Easy_Settings_Cache::set( 'php_info', self::$info_array );
 		}
 		return self::$info_array;
 	}
