@@ -101,3 +101,5 @@ jobs:
           git add readme.txt
           git commit -m "docs: Update changelog for version ${{ steps.get_version.outputs.version }}" || exit 0
           git push
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
