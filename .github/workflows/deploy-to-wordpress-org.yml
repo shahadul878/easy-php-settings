@@ -9,6 +9,8 @@ jobs:
   deploy:
     name: Deploy to WordPress.org SVN
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout code
