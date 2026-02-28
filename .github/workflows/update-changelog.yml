@@ -1,0 +1,99 @@
+name: Update Changelog
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'readme.txt'
+      - 'class-easy-php-settings.php'
+
+jobs:
+  update-changelog:
+    name: Update Changelog in readme.txt
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get latest version from readme.txt
+        id: get_version
+        run: |
+          VERSION=$(grep "Stable tag:" readme.txt | sed 's/Stable tag: //' | tr -d ' ')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+      
+      - name: Check if changelog needs update
+        id: check_changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          if grep -q "= ${VERSION} =" readme.txt; then
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+            echo "Changelog for version ${VERSION} already exists"
+          else
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+            echo "Changelog for version ${VERSION} needs to be added"
+          fi
+      
+      - name: Generate changelog entry
+        if: steps.check_changelog.outputs.needs_update == 'true'
+        id: changelog
+        run: |
+          # Get the previous tag or initial commit
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          
+          if [ -z "$PREVIOUS_TAG" ]; then
+            # No previous tag, get last 20 commits
+            CHANGELOG=$(git log --pretty=format:"* %s" -20 --reverse)
+          else
+            # Get commits since previous tag
+            CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"* %s" --reverse)
+          fi
+          
+          # Escape newlines for GitHub Actions
+          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Update readme.txt with changelog
+        if: steps.check_changelog.outputs.needs_update == 'true'
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          CHANGELOG="${{ steps.changelog.outputs.changelog }}"
+          DATE=$(date +"%B %d, %Y")
+          
+          # Check if changelog section exists
+          if grep -q "== Changelog ==" readme.txt; then
+            # Insert new version changelog after "== Changelog =="
+            sed -i "/== Changelog ==/a\\
+            \\
+            = ${VERSION} =\\
+            Released: ${DATE}\\
+            \\
+            ${CHANGELOG}\\
+            " readme.txt
+          else
+            # Add changelog section at the end
+            echo "" >> readme.txt
+            echo "== Changelog ==" >> readme.txt
+            echo "" >> readme.txt
+            echo "= ${VERSION} =" >> readme.txt
+            echo "Released: ${DATE}" >> readme.txt
+            echo "" >> readme.txt
+            echo "${CHANGELOG}" >> readme.txt
+          fi
+      
+      - name: Commit changelog update
+        if: steps.check_changelog.outputs.needs_update == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add readme.txt
+          git commit -m "docs: Update changelog for version ${{ steps.get_version.outputs.version }}" || exit 0
+          git push

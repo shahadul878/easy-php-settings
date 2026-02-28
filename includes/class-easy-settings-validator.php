@@ -261,10 +261,17 @@ class Easy_Settings_Validator {
 	public static function sanitize_setting( $key, $value ) {
 		$value = trim( $value );
 
-		// Remove any potentially dangerous characters.
-		$value = preg_replace( '/[^0-9KMGT]/i', '', $value );
+		// Security: Strict whitelist - only allow digits and K/M/G/T units
+		// Remove any potentially dangerous characters (everything except allowed chars).
+		$sanitized = preg_replace( '/[^0-9KMGT]/i', '', $value );
 
-		return $value;
+		// Additional validation: ensure the result matches expected format
+		// If sanitization removed everything or result is invalid, return empty string
+		if ( empty( $sanitized ) || ! preg_match( '/^(\d+)([KMGT]?)$/i', $sanitized ) ) {
+			return '';
+		}
+
+		return $sanitized;
 	}
 }
 

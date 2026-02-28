@@ -13,6 +13,7 @@
 .svnignore
 .git
 .github
+.gitignore
 .gitattributes
 .gitignore
 .gitlab-ci.yml

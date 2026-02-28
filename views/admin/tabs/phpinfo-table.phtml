@@ -1,0 +1,28 @@
+<table id="phpinfo-table" class="widefat striped">
+    <thead>
+        <tr>
+            <th></th>
+            <th>Directive</th>
+            <th>Value</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php $i=0; foreach ($phpinfo_section as $key => $val): ?>
+            <tr <?php echo (is_array($val) ? 'class="local-override"' : '') ?>>
+                <td><input type="checkbox" value="<?php echo $i ?>"/></td>
+                <td><?php echo htmlspecialchars($key) ?></td>
+                <td>
+                    <span class="value"><?php echo is_array($val) ? htmlspecialchars($val[0]) : htmlspecialchars($val); ?></span>
+                </td>
+                <td>
+                    <?php if (is_array($val)): ?>
+                        <span class="highlight">Locally Overridden</span>
+                    <?php else: ?>
+                        <span>Default</span>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        <?php $i++; endforeach; ?>
+    </tbody>
+</table> 

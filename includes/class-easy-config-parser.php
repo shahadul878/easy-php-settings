@@ -100,16 +100,32 @@ class Easy_Config_Parser {
 				return $value ? 'true' : 'false';
 
 			case 'string':
+				// Security: Validate string value to prevent code injection
+				// Only allow safe characters: digits and K/M/G/T units
+				$trimmed_value = trim( (string) $value );
+				if ( ! preg_match( '/^(\d+)([KMGT]?)$/i', $trimmed_value ) ) {
+					// If invalid, return empty string to prevent injection
+					return "''";
+				}
+				// Re-sanitize to ensure no malicious characters
+				$sanitized = preg_replace( '/[^0-9KMGT]/i', '', $trimmed_value );
 				// Escape single quotes and wrap in quotes.
-				$escaped = str_replace( array( '\\', "'" ), array( '\\\\', "\\'" ), $value );
+				$escaped = str_replace( array( '\\', "'" ), array( '\\\\', "\\'" ), $sanitized );
 				return "'{$escaped}'";
 
 			case 'int':
 				return (string) intval( $value );
 
 			default:
-				// Default to string.
-				$escaped = str_replace( array( '\\', "'" ), array( '\\\\', "\\'" ), $value );
+				// Default to string with validation.
+				$trimmed_value = trim( (string) $value );
+				if ( ! preg_match( '/^(\d+)([KMGT]?)$/i', $trimmed_value ) ) {
+					// If invalid, return empty string to prevent injection
+					return "''";
+				}
+				// Re-sanitize to ensure no malicious characters
+				$sanitized = preg_replace( '/[^0-9KMGT]/i', '', $trimmed_value );
+				$escaped = str_replace( array( '\\', "'" ), array( '\\\\', "\\'" ), $sanitized );
 				return "'{$escaped}'";
 		}
 	}
