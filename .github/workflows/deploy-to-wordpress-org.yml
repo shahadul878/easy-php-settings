@@ -21,6 +21,12 @@ jobs:
         with:
           php-version: '8.2'
       
+      - name: Install SVN
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y subversion
+          svn --version
+      
       - name: Get version from tag
         id: get_version
         run: |
