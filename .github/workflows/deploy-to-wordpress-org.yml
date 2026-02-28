@@ -214,11 +214,12 @@ jobs:
       - name: Create SVN tag
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
+          cd /tmp/svn
           
           # Remove existing tag if it exists
-          if [ -d "/tmp/svn/tags/${VERSION}" ]; then
+          if [ -d "tags/${VERSION}" ]; then
             echo "Removing existing tag ${VERSION}..."
-            svn rm /tmp/svn/tags/${VERSION} \
+            svn rm tags/${VERSION} \
               -m "Remove existing tag ${VERSION}" \
               --username ${{ secrets.WPORG_USERNAME }} \
               --password ${{ secrets.WPORG_PASSWORD }} \
@@ -228,7 +229,7 @@ jobs:
           
           # Copy trunk to tag
           echo "Creating tag ${VERSION}..."
-          svn cp /tmp/svn/trunk /tmp/svn/tags/${VERSION} \
+          svn cp trunk tags/${VERSION} \
             --username ${{ secrets.WPORG_USERNAME }} \
             --password ${{ secrets.WPORG_PASSWORD }} \
             --no-auth-cache \
