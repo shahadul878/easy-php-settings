@@ -73,9 +73,10 @@ jobs:
       
       - name: Check for syntax errors
         run: |
-          find . -name "*.php" -not -path "./vendor/*" -not -path "./node_modules/*" -exec php -l {} \; | grep -v "No syntax errors"
-          if [ $? -eq 0 ]; then
-            echo "❌ PHP syntax errors found"
+          ERRORS=$(find . -name "*.php" -not -path "./vendor/*" -not -path "./node_modules/*" -exec php -l {} \; 2>&1 | grep -v "No syntax errors" || true)
+          if [ -n "$ERRORS" ]; then
+            echo "❌ PHP syntax errors found:"
+            echo "$ERRORS"
             exit 1
           fi
           echo "✅ No PHP syntax errors"
