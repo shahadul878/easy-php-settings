@@ -222,7 +222,12 @@ jobs:
           if [ -d "tags/${VERSION}" ]; then
             echo "Removing existing tag ${VERSION}..."
             svn rm tags/${VERSION} \
-              -m "Remove existing tag ${VERSION}" \
+              --username ${{ secrets.WPORG_USERNAME }} \
+              --password ${{ secrets.WPORG_PASSWORD }} \
+              --no-auth-cache \
+              --non-interactive
+            # Commit the removal
+            svn commit -m "Remove existing tag ${VERSION}" \
               --username ${{ secrets.WPORG_USERNAME }} \
               --password ${{ secrets.WPORG_PASSWORD }} \
               --no-auth-cache \
