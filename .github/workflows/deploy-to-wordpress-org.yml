@@ -229,7 +229,6 @@ jobs:
           # Copy trunk to tag
           echo "Creating tag ${VERSION}..."
           svn cp /tmp/svn/trunk /tmp/svn/tags/${VERSION} \
-            -m "Tag version ${VERSION}" \
             --username ${{ secrets.WPORG_USERNAME }} \
             --password ${{ secrets.WPORG_PASSWORD }} \
             --no-auth-cache \
