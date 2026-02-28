@@ -9,6 +9,9 @@ on:
       - 'readme.txt'
       - 'class-easy-php-settings.php'
 
+permissions:
+  contents: write
+
 jobs:
   update-changelog:
     name: Update Changelog in readme.txt
