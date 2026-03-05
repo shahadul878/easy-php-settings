@@ -88,10 +88,15 @@ input:disabled + .slider {
 .easy-php-settings-preset-box {
   background: linear-gradient(135deg, #f0f6fc 0%, #e8f4f8 100%);
   border: 1px solid #c3e4ed;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 25px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 28px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.easy-php-settings-preset-box:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
 
 .easy-php-settings-preset-box h3 {
@@ -105,17 +110,93 @@ input:disabled + .slider {
 #easy_php_settings_preset {
   font-size: 14px;
   line-height: 1.5;
-  padding: 8px 12px;
-  border-radius: 4px;
+  padding: 10px 14px;
+  border-radius: 6px;
   border: 1px solid #8c8f94;
   min-width: 300px;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  background: #ffffff;
 }
 
 #easy_php_settings_preset:focus {
   border-color: #2271b1;
-  box-shadow: 0 0 0 1px #2271b1;
-  outline: 2px solid transparent;
+  box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.1);
+  outline: none;
+}
+
+/* ============================================
+   Save Button Wrapper
+   ============================================ */
+.easy-php-settings-save-wrapper {
+  margin-top: 32px !important;
+  margin-bottom: 24px !important;
+  display: block !important;
+  visibility: visible !important;
+  clear: both !important;
+  width: 100% !important;
+  overflow: visible !important;
+  height: auto !important;
+  min-height: 100px !important;
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+.easy-php-settings-save-box {
+  background: #ffffff !important;
+  border: 2px solid #2271b1 !important;
+  border-radius: 12px !important;
+  padding: 24px !important;
+  box-shadow: 0 4px 12px rgba(34, 113, 177, 0.15) !important;
+  display: block !important;
+  visibility: visible !important;
+  text-align: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+.easy-php-settings-save-wrapper .button-primary,
+.easy-php-settings-save-wrapper .button-large,
+.easy-php-settings-save-wrapper input[type="submit"],
+.easy-php-settings-save-wrapper button[type="submit"],
+#easy-php-settings-save-button,
+#easy-php-settings-debug-save-button,
+#submit {
+  font-size: 16px !important;
+  padding: 12px 32px !important;
+  height: auto !important;
+  min-height: 44px !important;
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  margin: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 8px rgba(34, 113, 177, 0.3) !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Ensure form submit buttons are always visible */
+form[action="options.php"] .easy-php-settings-save-wrapper,
+form[action="options.php"] .easy-php-settings-save-box,
+form[action="options.php"] .easy-php-settings-save-wrapper p.submit,
+form[action="options.php"] input[type="submit"],
+form[action="options.php"] button[type="submit"],
+form[action="options.php"] #easy-php-settings-save-button {
+  display: block !important;
+  visibility: visible !important;
+}
+
+form[action="options.php"] .easy-php-settings-save-wrapper p.submit {
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: center;
+}
+
+form[action="options.php"] .easy-php-settings-save-wrapper p.submit input[type="submit"] {
+  display: inline-block !important;
 }
 
 /* ============================================
@@ -126,23 +207,47 @@ input:disabled + .slider {
   border-color: #d63638 !important;
   color: #fff !important;
   text-shadow: none;
-  box-shadow: 0 1px 0 #b32d2e;
+  box-shadow: 0 2px 4px rgba(214, 54, 56, 0.3);
+  border-radius: 6px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .button-danger:hover,
 .button-danger:focus {
   background: #b32d2e !important;
   border-color: #b32d2e !important;
-  box-shadow: 0 1px 0 #8a2424;
+  box-shadow: 0 4px 8px rgba(214, 54, 56, 0.4);
+  transform: translateY(-1px);
 }
 
 .button-primary {
-  box-shadow: 0 1px 0 #135e96;
+  box-shadow: 0 2px 4px rgba(34, 113, 177, 0.3);
+  border-radius: 6px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .button-primary:hover,
 .button-primary:focus {
-  box-shadow: 0 1px 0 #0a4b78;
+  box-shadow: 0 4px 8px rgba(34, 113, 177, 0.4);
+  transform: translateY(-1px);
+  background: #135e96 !important;
+}
+
+.button-secondary {
+  border-radius: 6px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.button-secondary:hover,
+.button-secondary:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 /* ============================================
@@ -151,10 +256,15 @@ input:disabled + .slider {
 .easy-php-settings-config-box {
   background: #ffffff;
   border: 1px solid #c3c4c7;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.easy-php-settings-config-box:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
 
 .easy-php-settings-config-box h3 {
@@ -168,18 +278,19 @@ input:disabled + .slider {
 
 #easy_php_settings_custom_php_ini {
   border: 1px solid #8c8f94;
-  border-radius: 4px;
+  border-radius: 6px;
   font-family: 'Courier New', Courier, monospace;
   font-size: 13px;
   line-height: 1.6;
   padding: 12px;
   background: #f6f7f7;
+  transition: all 0.3s ease;
 }
 
 #easy_php_settings_custom_php_ini:focus {
   border-color: #2271b1;
-  box-shadow: 0 0 0 1px #2271b1;
-  outline: 2px solid transparent;
+  box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.1);
+  outline: none;
   background: #ffffff;
 }
 
@@ -233,10 +344,15 @@ details[open] summary {
 .easy-php-settings-tool-section {
   background: #ffffff;
   border: 1px solid #c3c4c7;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.easy-php-settings-tool-section:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
 
 .easy-php-settings-tool-section h4 {
@@ -309,8 +425,24 @@ details[open] summary {
   vertical-align: top;
 }
 
-.form-table input[type="text"] {
-  border-radius: 4px;
+.form-table input[type="text"],
+.form-table input[type="number"],
+.form-table select,
+.form-table textarea {
+  border-radius: 6px;
+  border: 1px solid #8c8f94;
+  padding: 8px 12px;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.form-table input[type="text"]:focus,
+.form-table input[type="number"]:focus,
+.form-table select:focus,
+.form-table textarea:focus {
+  border-color: #2271b1;
+  box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.1);
+  outline: none;
 }
 
 .form-table .description {
@@ -325,17 +457,18 @@ details[open] summary {
 input[type="text"]#php-settings-search,
 input[type="text"]#extensions-search {
   border: 1px solid #8c8f94;
-  border-radius: 4px;
-  padding: 8px 12px;
+  border-radius: 6px;
+  padding: 10px 14px;
   font-size: 14px;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  background: #ffffff;
 }
 
 input[type="text"]#php-settings-search:focus,
 input[type="text"]#extensions-search:focus {
   border-color: #2271b1;
-  box-shadow: 0 0 0 1px #2271b1;
-  outline: 2px solid transparent;
+  box-shadow: 0 0 0 2px rgba(34, 113, 177, 0.1);
+  outline: none;
 }
 
 /* ============================================
@@ -359,20 +492,42 @@ input[type="text"]#extensions-search:focus {
    Tab Navigation
    ============================================ */
 .nav-tab-wrapper {
-  margin-bottom: 20px;
-  border-bottom: 1px solid #c3c4c7;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #c3c4c7;
+  background: transparent;
 }
 
 .nav-tab {
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 8px 8px 0 0;
+  margin-right: 4px;
+  padding: 10px 16px;
+  position: relative;
+  font-weight: 500;
 }
 
 .nav-tab:hover {
   background-color: #f6f7f7;
+  color: #2271b1;
+  transform: translateY(-1px);
 }
 
 .nav-tab-active {
   font-weight: 600;
+  background-color: #ffffff;
+  border-bottom: 2px solid #ffffff;
+  color: #2271b1;
+  margin-bottom: -2px;
+}
+
+.nav-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #2271b1;
 }
 
 /* ============================================
@@ -382,9 +537,10 @@ input[type="text"]#extensions-search:focus {
   background: #f0f6fc;
   border: 1px solid #c3e4ed;
   border-left: 4px solid #2271b1;
-  border-radius: 4px;
-  padding: 15px;
-  margin: 15px 0;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .easy-php-info-box p {
@@ -396,18 +552,30 @@ input[type="text"]#extensions-search:focus {
   background: #eaf4ea;
   border: 1px solid #c3e4c3;
   border-left: 4px solid #00a32a;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .easy-php-warning-box {
   background: #fcf8e3;
   border: 1px solid #f0e68c;
   border-left: 4px solid #f0ad4e;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .easy-php-error-box {
   background: #f8d7da;
   border: 1px solid #f1b4b7;
   border-left: 4px solid #d63638;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 /* ============================================
@@ -427,11 +595,268 @@ input[type="text"]#extensions-search:focus {
   }
 }
 
+/* Submit button specific styles */
+input[type="submit"],
+button[type="submit"],
+#easy-php-settings-save-button,
+#submit {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+}
+
 /* Button loading state */
 button[disabled],
 input[type="submit"][disabled] {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+/* ============================================
+   WordPress Card Class (Pro Tab)
+   ============================================ */
+.card {
+  background: #ffffff;
+  border: 1px solid #c3c4c7;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+/* ============================================
+   About Tab Styles
+   ============================================ */
+.easy-php-about-container {
+  max-width: 1200px;
+}
+
+.easy-php-about-header-card {
+  background: linear-gradient(135deg, #f0f6fc 0%, #e8f4f8 100%);
+  border: 1px solid #c3e4ed;
+  border-radius: 12px;
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.easy-php-about-avatar {
+  flex-shrink: 0;
+}
+
+.easy-php-about-avatar img {
+  border-radius: 50%;
+  border: 4px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+}
+
+.easy-php-about-info {
+  flex: 1;
+}
+
+.easy-php-about-name {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1d2327;
+  line-height: 1.2;
+}
+
+.easy-php-about-title {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2271b1;
+}
+
+.easy-php-about-description {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #50575e;
+}
+
+.easy-php-about-card {
+  background: #ffffff;
+  border: 1px solid #c3c4c7;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.easy-php-about-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.easy-php-about-card-title {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2327;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f0f0f1;
+}
+
+.easy-php-about-card-title .dashicons {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: #2271b1;
+}
+
+.easy-php-about-contact-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.easy-php-about-contact-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #f6f7f7;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #1d2327;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.easy-php-about-contact-link:hover {
+  background: #2271b1;
+  color: #ffffff;
+  border-color: #2271b1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(34, 113, 177, 0.3);
+  text-decoration: none;
+}
+
+.easy-php-about-contact-link .dashicons {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.easy-php-about-contact-link span:not(.dashicons):not(.easy-php-link-url) {
+  flex: 1;
+  font-weight: 600;
+}
+
+.easy-php-link-url {
+  font-size: 13px;
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+.easy-php-about-contact-link:hover .easy-php-link-url {
+  opacity: 0.9;
+}
+
+.easy-php-about-plugin-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.easy-php-info-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f1;
+}
+
+.easy-php-info-row:last-child {
+  border-bottom: none;
+}
+
+.easy-php-info-label {
+  font-weight: 600;
+  color: #50575e;
+  min-width: 120px;
+  font-size: 14px;
+}
+
+.easy-php-info-value {
+  color: #1d2327;
+  font-size: 14px;
+}
+
+.easy-php-tech-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.easy-php-tech-tag {
+  display: inline-block;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #f0f6fc 0%, #e8f4f8 100%);
+  border: 1px solid #c3e4ed;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2271b1;
+  transition: all 0.3s ease;
+}
+
+.easy-php-tech-tag:hover {
+  background: #2271b1;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(34, 113, 177, 0.3);
+}
+
+.easy-php-about-section {
+  color: #50575e;
+  line-height: 1.7;
+}
+
+.easy-php-about-section p {
+  margin: 0 0 16px 0;
+  font-size: 15px;
+}
+
+.easy-php-about-section p:last-child {
+  margin-bottom: 0;
+}
+
+.easy-php-about-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.easy-php-about-actions .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.easy-php-about-actions .button .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
 }
 
 /* ============================================
@@ -456,6 +881,87 @@ input[type="submit"][disabled] {
   .easy-php-settings-preset-box,
   .easy-php-settings-config-box,
   .easy-php-settings-tool-section {
-    padding: 15px;
+    padding: 20px;
+  }
+
+  /* About Tab Responsive */
+  .easy-php-about-header-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 24px;
+  }
+
+  .easy-php-about-avatar {
+    margin-bottom: 16px;
+  }
+
+  .easy-php-about-name {
+    font-size: 24px;
+  }
+
+  .easy-php-about-card {
+    padding: 20px;
+  }
+
+  .easy-php-about-contact-link {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .easy-php-about-contact-link .easy-php-link-url {
+    margin-left: 32px;
+  }
+
+  .easy-php-info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .easy-php-info-label {
+    min-width: auto;
+  }
+
+  .easy-php-about-actions {
+    flex-direction: column;
+  }
+
+  .easy-php-about-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .nav-tab {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .easy-php-about-header-card {
+    padding: 20px;
+  }
+
+  .easy-php-about-avatar img {
+    width: 100px;
+    height: 100px;
+  }
+
+  .easy-php-about-name {
+    font-size: 20px;
+  }
+
+  .easy-php-about-card {
+    padding: 16px;
+  }
+
+  .easy-php-tech-stack {
+    gap: 8px;
+  }
+
+  .easy-php-tech-tag {
+    font-size: 12px;
+    padding: 6px 12px;
   }
 } 

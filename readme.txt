@@ -4,7 +4,7 @@ Contributors: shahadul878,codereyes
 Tags: php settings, ini, performance, debug, wp-config
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 1.0.5
+Stable tag: 1.1.0
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -120,6 +120,24 @@ These switches directly control the debugging constants in your `wp-config.php` 
 4. The Debugging tab, with toggle switches for WordPress debugging constants.
 
 == Changelog ==
+
+= 1.1.0 =
+Released: March 5, 2026
+
+* Refactored: Complete modular architecture — main plugin file reduced from 2,000+ lines to ~300 lines
+* Refactored: All features moved into self-contained modules (General Settings, Tools, Status, Extensions, PHP Settings, About)
+* Refactored: Each module owns its own settings registration, rendering, and action handling
+* Fixed: Double settings registration that could cause unexpected behavior
+* Fixed: Broken sanitize callback reference in General Settings module
+* Fixed: Form/handler mismatch — export, import, and reset handlers now live in the Tools module alongside their forms
+* Improved: Cleaner separation of concerns with public getters on the main class
+* Improved: Tools tab now consolidates debugging settings, log viewer, export/import, and reset in one place
+* Removed: Legacy duplicate file (includes/class-easy-php-settings.php) that referenced non-existent classes
+* Removed: Empty placeholder directories (includes/admin, data, handlers, info, settings, utils)
+* Removed: Unused duplicate assets and view directories
+* Organized: Plugin submission assets moved to .wordpress-org/ directory
+* Updated: GitHub Actions workflows aligned with new file structure
+* Updated: .distignore cleaned up for accurate distribution builds
 
 = 1.0.5 =
 * Enhanced: Improved wp-config.php editing security with proper parser and backup/restore functionality

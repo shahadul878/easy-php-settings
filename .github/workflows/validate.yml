@@ -10,26 +10,24 @@ jobs:
   validate:
     name: Validate Plugin
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           extensions: mbstring, xml, zip
-      
+
       - name: Validate readme.txt
         run: |
-          # Check if readme.txt exists
           if [ ! -f readme.txt ]; then
             echo "❌ readme.txt not found"
             exit 1
           fi
-          
-          # Check required headers
+
           REQUIRED_HEADERS=("Plugin Name" "Stable tag" "Requires at least" "Tested up to" "Requires PHP" "License")
           for header in "${REQUIRED_HEADERS[@]}"; do
             if ! grep -q "${header}:" readme.txt; then
@@ -37,18 +35,16 @@ jobs:
               exit 1
             fi
           done
-          
+
           echo "✅ readme.txt validation passed"
-      
+
       - name: Check plugin header
         run: |
-          # Check if main plugin file exists
           if [ ! -f class-easy-php-settings.php ]; then
             echo "❌ Main plugin file not found"
             exit 1
           fi
-          
-          # Check required plugin headers
+
           REQUIRED_HEADERS=("Plugin Name" "Version" "Author" "License")
           for header in "${REQUIRED_HEADERS[@]}"; do
             if ! grep -q "${header}:" class-easy-php-settings.php; then
@@ -56,39 +52,31 @@ jobs:
               exit 1
             fi
           done
-          
+
           echo "✅ Plugin header validation passed"
-      
-      - name: Run PHPCS
-        run: |
-          if [ -f composer.json ]; then
-            composer install --no-interaction
-          fi
-          
-          if [ -f vendor/bin/phpcs ]; then
-            vendor/bin/phpcs --standard=phpcs.xml . || true
-          else
-            echo "⚠️ PHPCS not available, skipping"
-          fi
-      
+
       - name: Check for syntax errors
         run: |
-          ERRORS=$(find . -name "*.php" -not -path "./vendor/*" -not -path "./node_modules/*" -exec php -l {} \; 2>&1 | grep -v "No syntax errors" || true)
+          ERRORS=""
+          while IFS= read -r file; do
+            OUTPUT=$(php -l "$file" 2>&1)
+            if echo "$OUTPUT" | grep -q "Parse error\|Fatal error"; then
+              ERRORS="${ERRORS}\n${OUTPUT}"
+            fi
+          done < <(find . -name "*.php" -not -path "./.git/*")
+
           if [ -n "$ERRORS" ]; then
             echo "❌ PHP syntax errors found:"
-            echo "$ERRORS"
+            echo -e "$ERRORS"
             exit 1
           fi
           echo "✅ No PHP syntax errors"
-      
+
       - name: Validate version consistency
         run: |
-          # Get version from plugin file
           PLUGIN_VERSION=$(grep "Version:" class-easy-php-settings.php | head -1 | sed 's/.*Version:[[:space:]]*\([0-9.]*\).*/\1/' | tr -d ' ')
-          
-          # Get version from readme.txt
           README_VERSION=$(grep "Stable tag:" readme.txt | sed 's/Stable tag:[[:space:]]*\([0-9.]*\).*/\1/' | tr -d ' ')
-          
+
           if [ "$PLUGIN_VERSION" != "$README_VERSION" ]; then
             echo "⚠️ Version mismatch:"
             echo "   Plugin file: $PLUGIN_VERSION"
@@ -96,4 +84,39 @@ jobs:
             echo "   (This is OK for development, but should match before release)"
           else
             echo "✅ Version consistency check passed: $PLUGIN_VERSION"
+          fi
+
+      - name: Validate plugin structure
+        run: |
+          REQUIRED_FILES=(
+            "class-easy-php-settings.php"
+            "readme.txt"
+            "css/admin-styles.css"
+            "js/admin.js"
+            "view/phpinfo-table.phtml"
+            "includes/class-easy-module-base.php"
+            "includes/class-easy-module-manager.php"
+            "includes/class-easy-module-loader.php"
+          )
+
+          MISSING=0
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Missing required file: $file"
+              MISSING=1
+            fi
+          done
+
+          MODULE_COUNT=$(ls modules/class-module-*.php 2>/dev/null | wc -l)
+          if [ "$MODULE_COUNT" -eq 0 ]; then
+            echo "❌ No modules found in modules/ directory"
+            MISSING=1
+          else
+            echo "ℹ️ Found $MODULE_COUNT modules"
+          fi
+
+          if [ "$MISSING" -eq 0 ]; then
+            echo "✅ Plugin structure validation passed"
+          else
+            exit 1
           fi

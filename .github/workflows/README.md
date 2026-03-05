@@ -13,7 +13,8 @@ This directory contains GitHub Actions workflows for the Easy PHP Settings plugi
 - Updates `readme.txt` with the new version and changelog
 - Updates version in the main plugin file
 - Creates a deployment package (excluding files in `.distignore`)
-- Deploys to WordPress.org SVN (trunk and tag)
+- Deploys plugin code to WordPress.org SVN (trunk and tag)
+- Deploys assets from `.wordpress-org/` to SVN `assets/`
 - Creates a GitHub release with the zip file
 
 **Required Secrets:**
@@ -33,6 +34,9 @@ This directory contains GitHub Actions workflows for the Easy PHP Settings plugi
 - Automatically updates the changelog in `readme.txt` if a new version is detected
 - Commits the changelog update back to the repository
 
+**Required Secrets:**
+- `GH_TOKEN`: A GitHub personal access token with `contents: write` permission
+
 **Note:** This workflow will skip if the commit message contains `[skip ci]`
 
 ### 3. `validate.yml`
@@ -41,9 +45,27 @@ This directory contains GitHub Actions workflows for the Easy PHP Settings plugi
 **What it does:**
 - Validates `readme.txt` format and required headers
 - Validates plugin header in main plugin file
-- Runs PHPCS (if available)
-- Checks for PHP syntax errors
+- Checks for PHP syntax errors across all `.php` files
 - Validates version consistency between plugin file and readme.txt
+- Validates required plugin files and module structure exist
+
+## Plugin Structure
+
+```
+easy-php-settings/
+├── .distignore                 # Files excluded from WP.org distribution
+├── .github/workflows/          # CI/CD workflows
+├── .gitignore
+├── .wordpress-org/             # WP.org plugin page assets (banners, icons, screenshots)
+├── class-easy-php-settings.php # Main plugin entry point
+├── css/admin-styles.css        # Admin stylesheet
+├── includes/                   # Helper classes (12 files)
+├── js/admin.js                 # Admin JavaScript
+├── languages/                  # Translation files
+├── modules/                    # Feature modules (6 files)
+├── readme.txt                  # WordPress.org readme
+└── view/phpinfo-table.phtml    # PHP info display template
+```
 
 ## Setup Instructions
 
@@ -57,17 +79,12 @@ This directory contains GitHub Actions workflows for the Easy PHP Settings plugi
      - Get this from: https://wordpress.org/profile/applications
      - Create a new application password with SVN access
 
-### 2. First-time SVN Setup
+### 2. Configure GitHub Token
 
-If this is your first deployment, you may need to initialize the SVN repository structure:
-
-```bash
-svn checkout https://plugins.svn.wordpress.org/easy-php-settings/ /tmp/svn
-cd /tmp/svn
-mkdir -p trunk tags assets
-svn add trunk tags assets
-svn commit -m "Initial structure"
-```
+For the changelog workflow:
+1. Create a personal access token at https://github.com/settings/tokens
+2. Grant `contents: write` permission
+3. Add it as a secret named `GH_TOKEN` in your repository settings
 
 ### 3. Tagging and Releasing
 
@@ -82,14 +99,14 @@ git commit -m "Release version 1.0.5"
 
 # 4. Create and push tag
 git tag v1.0.5
-git push origin main
+git push origin master
 git push origin v1.0.5
 ```
 
 The workflow will automatically:
 - Extract version from tag
 - Generate changelog
-- Deploy to WordPress.org
+- Deploy to WordPress.org (trunk, tag, and assets)
 - Create GitHub release
 
 ## Troubleshooting
@@ -101,19 +118,17 @@ The workflow will automatically:
 
 ### Changelog is empty
 - Ensure you have previous tags in the repository
-- Check that commits follow conventional format (the workflow uses commit messages)
+- Check that commits follow a descriptive format (the workflow uses commit messages)
 
 ### Files are missing in deployment
-- Check `.distignore` file - listed files/folders are excluded
+- Check `.distignore` file — listed files/folders are excluded from the ZIP
 - Verify files exist in the repository before tagging
+
+### Assets not showing on WordPress.org
+- Ensure images are in `.wordpress-org/` directory
+- File names must be exact: `banner-772x250.png`, `icon-128x128.png`, etc.
+- PNG and JPEG formats only
 
 ### Version mismatch warnings
 - Ensure version in `class-easy-php-settings.php` matches `Stable tag` in `readme.txt`
 - Update both before creating a release tag
-
-## Notes
-
-- The workflow uses `.distignore` to exclude files from deployment
-- Assets (banners, icons, screenshots) should be in the `assets/` directory
-- The changelog is generated from git commit messages since the last tag
-- SVN tags are created automatically from the trunk version
