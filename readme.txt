@@ -114,10 +114,12 @@ These switches directly control the debugging constants in your `wp-config.php` 
 
 == Screenshots ==
 
-1. The General Settings tab where users can input their desired PHP values.
-2. The Configuration Generator, which provides code snippets for manual server configuration.
-3. The Status tab, showing live PHP values and server environment details.
-4. The Debugging tab, with toggle switches for WordPress debugging constants.
+1. General Settings — Configure PHP memory, upload limits, execution time, presets, and WordPress memory constants.
+2. Tools — Debugging toggles, log viewer, export/import settings, and reset options.
+3. PHP Settings — Full table of all PHP directives with search and copy functionality.
+4. Extensions — View all loaded PHP extensions by category with missing extension alerts.
+5. Status — Live comparison of current vs. recommended PHP and WordPress memory values.
+6. About — Plugin information, author details, and support links.
 
 == Changelog ==
 
