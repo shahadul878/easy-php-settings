@@ -16,7 +16,7 @@ Manage PHP INI settings and WordPress debugging constants directly from the Word
 
 | Extensions | Status | About |
 |:---:|:---:|:---:|
-| ![Extensions](.wordpress-org/screenshot-4.png) | ![Status](.wordpress-org/screenshot-5.png) | ![About](.wordpress-org/screenshot-6.png) |
+| ![Extensions](.wordpress-org/screenshot-4.png) | ![Status](.wordpress-org/screenshot-5.png) |
 
 ## Features
 
