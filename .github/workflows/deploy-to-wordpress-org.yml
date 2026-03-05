@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to WordPress.org SVN
+    name: Deploy Plugin + Assets to WordPress.org SVN
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -27,7 +27,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y subversion
-          svn --version
 
       - name: Get version from tag
         id: get_version
@@ -86,11 +85,9 @@ jobs:
 
       - name: Create deployment package
         run: |
-          VERSION="${{ steps.get_version.outputs.version }}"
           PLUGIN_SLUG="easy-php-settings"
 
           mkdir -p /tmp/${PLUGIN_SLUG}
-
           rsync -av --exclude-from=.distignore \
             ./ /tmp/${PLUGIN_SLUG}/
 
@@ -101,15 +98,13 @@ jobs:
       - name: Verify SVN credentials
         run: |
           if [ -z "${{ secrets.WPORG_USERNAME }}" ] || [ -z "${{ secrets.WPORG_PASSWORD }}" ]; then
-            echo "❌ Error: WPORG_USERNAME or WPORG_PASSWORD secrets are not set"
-            echo "Please configure these secrets in GitHub: Settings → Secrets and variables → Actions"
+            echo "❌ WPORG_USERNAME or WPORG_PASSWORD secrets are not set"
             exit 1
           fi
           echo "✅ SVN credentials configured"
 
       - name: Checkout WordPress.org SVN
         run: |
-          echo "Checking out WordPress.org SVN repository..."
           svn checkout https://plugins.svn.wordpress.org/easy-php-settings/ /tmp/svn \
             --username ${{ secrets.WPORG_USERNAME }} \
             --password ${{ secrets.WPORG_PASSWORD }} \
@@ -117,102 +112,86 @@ jobs:
             --no-auth-cache \
             --non-interactive
 
-          echo "Updating trunk..."
           svn update --set-depth infinity /tmp/svn/trunk \
             --username ${{ secrets.WPORG_USERNAME }} \
             --password ${{ secrets.WPORG_PASSWORD }} \
             --no-auth-cache \
             --non-interactive
 
-          echo "Updating assets..."
           svn update --set-depth infinity /tmp/svn/assets \
             --username ${{ secrets.WPORG_USERNAME }} \
             --password ${{ secrets.WPORG_PASSWORD }} \
             --no-auth-cache \
             --non-interactive
 
-          echo "Updating tags directory..."
           svn update --set-depth infinity /tmp/svn/tags/${{ steps.get_version.outputs.version }} \
             --username ${{ secrets.WPORG_USERNAME }} \
             --password ${{ secrets.WPORG_PASSWORD }} \
             --no-auth-cache \
-            --non-interactive || echo "Tag directory doesn't exist yet (will be created)"
+            --non-interactive || echo "Tag doesn't exist yet"
 
-      - name: Deploy to SVN trunk
+      - name: Deploy plugin to SVN trunk
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
 
-          # Remove all files from trunk (keeps SVN metadata in .svn/)
           find /tmp/svn/trunk -mindepth 1 -not -path '*/.svn*' -delete 2>/dev/null || true
 
-          # Copy new plugin files into trunk
           rsync -av --exclude-from=.distignore \
             ${{ github.workspace }}/ /tmp/svn/trunk/
 
           cd /tmp/svn
 
-          # Schedule new/unversioned files for addition (handles spaces in paths)
           svn status trunk/ | grep '^?' | sed 's/^?       //' | while IFS= read -r file; do
             svn add "$file"
           done
 
-          # Schedule missing/deleted files for removal (handles spaces in paths)
           svn status trunk/ | grep '^!' | sed 's/^!       //' | while IFS= read -r file; do
             svn rm "$file"
           done
 
-          echo "SVN status before commit:"
+          echo "SVN trunk status:"
           svn status trunk/
 
-          echo "Committing changes to trunk..."
           svn commit -m "Update trunk to version ${VERSION}" \
             --username ${{ secrets.WPORG_USERNAME }} \
             --password ${{ secrets.WPORG_PASSWORD }} \
             --no-auth-cache \
             --non-interactive
 
-          if [ $? -eq 0 ]; then
-            echo "✅ Successfully committed to trunk"
-          else
-            echo "❌ Failed to commit to trunk"
-            exit 1
-          fi
+          echo "✅ Trunk deployed"
 
       - name: Deploy assets to SVN
         run: |
-          if [ -d ".wordpress-org" ]; then
-            echo "Deploying assets from .wordpress-org/ ..."
-            mkdir -p /tmp/svn/assets
+          if [ ! -d ".wordpress-org" ]; then
+            echo "ℹ️ No .wordpress-org/ directory, skipping assets"
+            exit 0
+          fi
 
-            rsync -av --delete \
-              --exclude='README.md' \
-              .wordpress-org/ /tmp/svn/assets/
+          mkdir -p /tmp/svn/assets
 
-            cd /tmp/svn
+          rsync -av --delete \
+            --exclude='README.md' \
+            .wordpress-org/ /tmp/svn/assets/
 
-            # Schedule new assets for addition (handles spaces in paths)
-            svn status assets/ | grep '^?' | sed 's/^?       //' | while IFS= read -r file; do
-              svn add "$file"
-            done
+          cd /tmp/svn
 
-            # Schedule removed assets for deletion (handles spaces in paths)
-            svn status assets/ | grep '^!' | sed 's/^!       //' | while IFS= read -r file; do
-              svn rm "$file"
-            done
+          svn status assets/ | grep '^?' | sed 's/^?       //' | while IFS= read -r file; do
+            svn add "$file"
+          done
 
-            if svn status assets/ | grep -q '[ADMRC]'; then
-              echo "Committing asset changes..."
-              svn commit -m "Update assets for version ${{ steps.get_version.outputs.version }}" \
-                --username ${{ secrets.WPORG_USERNAME }} \
-                --password ${{ secrets.WPORG_PASSWORD }} \
-                --no-auth-cache \
-                --non-interactive
-              echo "✅ Assets deployed"
-            else
-              echo "ℹ️ No asset changes to commit"
-            fi
+          svn status assets/ | grep '^!' | sed 's/^!       //' | while IFS= read -r file; do
+            svn rm "$file"
+          done
+
+          if svn status assets/ | grep -q '[ADMRC]'; then
+            svn commit -m "Update assets for version ${{ steps.get_version.outputs.version }}" \
+              --username ${{ secrets.WPORG_USERNAME }} \
+              --password ${{ secrets.WPORG_PASSWORD }} \
+              --no-auth-cache \
+              --non-interactive
+            echo "✅ Assets deployed"
           else
-            echo "⚠️ No .wordpress-org/ directory found, skipping asset deployment"
+            echo "ℹ️ No asset changes"
           fi
 
       - name: Create SVN tag
@@ -221,12 +200,7 @@ jobs:
           cd /tmp/svn
 
           if [ -d "tags/${VERSION}" ]; then
-            echo "Removing existing tag ${VERSION}..."
-            svn rm tags/${VERSION} \
-              --username ${{ secrets.WPORG_USERNAME }} \
-              --password ${{ secrets.WPORG_PASSWORD }} \
-              --no-auth-cache \
-              --non-interactive
+            svn rm "tags/${VERSION}"
             svn commit -m "Remove existing tag ${VERSION}" \
               --username ${{ secrets.WPORG_USERNAME }} \
               --password ${{ secrets.WPORG_PASSWORD }} \
@@ -234,26 +208,15 @@ jobs:
               --non-interactive
           fi
 
-          echo "Creating tag ${VERSION}..."
-          svn cp trunk tags/${VERSION} \
-            --username ${{ secrets.WPORG_USERNAME }} \
-            --password ${{ secrets.WPORG_PASSWORD }} \
-            --no-auth-cache \
-            --non-interactive
+          svn cp trunk "tags/${VERSION}"
 
-          echo "Committing tag ${VERSION}..."
           svn commit -m "Tag version ${VERSION}" \
             --username ${{ secrets.WPORG_USERNAME }} \
             --password ${{ secrets.WPORG_PASSWORD }} \
             --no-auth-cache \
             --non-interactive
 
-          if [ $? -eq 0 ]; then
-            echo "✅ Successfully created and committed tag ${VERSION}"
-          else
-            echo "❌ Failed to commit tag"
-            exit 1
-          fi
+          echo "✅ Tag ${VERSION} created"
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
