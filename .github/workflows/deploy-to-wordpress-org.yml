@@ -141,18 +141,28 @@ jobs:
       - name: Deploy to SVN trunk
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
-          PLUGIN_SLUG="easy-php-settings"
 
-          rm -rf /tmp/svn/trunk/*
+          # Remove all files from trunk (keeps SVN metadata in .svn/)
+          find /tmp/svn/trunk -mindepth 1 -not -path '*/.svn*' -delete 2>/dev/null || true
 
+          # Copy new plugin files into trunk
           rsync -av --exclude-from=.distignore \
             ${{ github.workspace }}/ /tmp/svn/trunk/
 
           cd /tmp/svn
 
-          svn add --force trunk/*
+          # Schedule new/unversioned files for addition (handles spaces in paths)
+          svn status trunk/ | grep '^?' | sed 's/^?       //' | while IFS= read -r file; do
+            svn add "$file"
+          done
 
-          svn status | grep '^!' | awk '{print $2}' | xargs -r svn rm
+          # Schedule missing/deleted files for removal (handles spaces in paths)
+          svn status trunk/ | grep '^!' | sed 's/^!       //' | while IFS= read -r file; do
+            svn rm "$file"
+          done
+
+          echo "SVN status before commit:"
+          svn status trunk/
 
           echo "Committing changes to trunk..."
           svn commit -m "Update trunk to version ${VERSION}" \
@@ -180,8 +190,15 @@ jobs:
 
             cd /tmp/svn
 
-            svn add --force assets/* 2>/dev/null || true
-            svn status assets/ | grep '^!' | awk '{print $2}' | xargs -r svn rm
+            # Schedule new assets for addition (handles spaces in paths)
+            svn status assets/ | grep '^?' | sed 's/^?       //' | while IFS= read -r file; do
+              svn add "$file"
+            done
+
+            # Schedule removed assets for deletion (handles spaces in paths)
+            svn status assets/ | grep '^!' | sed 's/^!       //' | while IFS= read -r file; do
+              svn rm "$file"
+            done
 
             if svn status assets/ | grep -q '[ADMRC]'; then
               echo "Committing asset changes..."
