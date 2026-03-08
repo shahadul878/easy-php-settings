@@ -328,16 +328,27 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		$recommended   = $this->plugin->get_recommended_values();
 		$access        = $all_settings[ $key ]['access'] ?? 0;
 		$is_changeable = ( INI_USER === $access || INI_ALL === $access );
+		$tooltips      = $this->plugin->get_tooltips();
+		$tooltip       = isset( $tooltips[ $key ] ) ? $tooltips[ $key ] : '';
 
 		$field_id   = 'easy_php_settings_' . esc_attr( $key );
 		$aria_label = sprintf( __( 'Enter value for %s', 'easy-php-settings' ), esc_attr( $key ) );
 
-		echo "<input type='text' id='" . esc_attr( $field_id ) . "' name='easy_php_settings_settings[" . esc_attr( $key ) . "]' value='" . esc_attr( $value ) . "' class='regular-text' placeholder='" . esc_attr( $recommended[ $key ] ?? '' ) . "' aria-label='" . esc_attr( $aria_label ) . "' aria-describedby='" . esc_attr( $field_id ) . "_description'>";
+		$aria_desc = $field_id . '_description';
+		if ( $tooltip ) {
+			$aria_desc = $field_id . '_help ' . $aria_desc;
+		}
+		echo '<span class="easy-php-field-wrap">';
+		echo "<input type='text' id='" . esc_attr( $field_id ) . "' name='easy_php_settings_settings[" . esc_attr( $key ) . "]' value='" . esc_attr( $value ) . "' class='regular-text' placeholder='" . esc_attr( $recommended[ $key ] ?? '' ) . "' aria-label='" . esc_attr( $aria_label ) . "' aria-describedby='" . esc_attr( $aria_desc ) . "'>";
+		if ( $tooltip ) {
+			echo '<span id="' . esc_attr( $field_id ) . '_help" class="dashicons dashicons-editor-help easy-php-help-icon" title="' . esc_attr( $tooltip ) . '" aria-label="' . esc_attr__( 'Help', 'easy-php-settings' ) . '"></span>';
+		}
+		echo '</span>';
 
 		$this->render_status_indicator( $key, $current_value, $recommended );
 
 		if ( ! $is_changeable ) {
-			echo '<p class="description" style="color: #d63638;">' . esc_html__( 'This setting cannot be changed at runtime. Use the configuration generator below.', 'easy-php-settings' ) . '</p>';
+			echo '<p class="description easy-php-runtime-warning">' . esc_html__( 'This setting cannot be changed at runtime. Use the configuration generator below.', 'easy-php-settings' ) . '</p>';
 			$this->show_alternative_instructions( $key, $recommended );
 		}
 	}
@@ -348,28 +359,65 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		$value         = isset( $options[ $key ] ) ? $options[ $key ] : '';
 		$current_value = $this->get_wp_memory_value( $key );
 		$recommended   = $this->plugin->get_wp_memory_recommended_values();
+		$tooltips      = $this->plugin->get_tooltips();
+		$tooltip       = isset( $tooltips[ $key ] ) ? $tooltips[ $key ] : '';
 
 		$field_id   = 'easy_php_settings_wp_memory_' . esc_attr( $key );
 		$aria_label = sprintf( __( 'Enter value for %s', 'easy-php-settings' ), esc_attr( $key ) );
 
-		echo "<input type='text' id='" . esc_attr( $field_id ) . "' name='easy_php_settings_wp_memory_settings[" . esc_attr( $key ) . "]' value='" . esc_attr( $value ) . "' class='regular-text' placeholder='" . esc_attr( $recommended[ $key ] ?? '' ) . "' aria-label='" . esc_attr( $aria_label ) . "' aria-describedby='" . esc_attr( $field_id ) . "_description'>";
+		$aria_desc = $field_id . '_description';
+		if ( $tooltip ) {
+			$aria_desc = $field_id . '_help ' . $aria_desc;
+		}
+		echo '<span class="easy-php-field-wrap">';
+		echo "<input type='text' id='" . esc_attr( $field_id ) . "' name='easy_php_settings_wp_memory_settings[" . esc_attr( $key ) . "]' value='" . esc_attr( $value ) . "' class='regular-text' placeholder='" . esc_attr( $recommended[ $key ] ?? '' ) . "' aria-label='" . esc_attr( $aria_label ) . "' aria-describedby='" . esc_attr( $aria_desc ) . "'>";
+		if ( $tooltip ) {
+			echo '<span id="' . esc_attr( $field_id ) . '_help" class="dashicons dashicons-editor-help easy-php-help-icon" title="' . esc_attr( $tooltip ) . '" aria-label="' . esc_attr__( 'Help', 'easy-php-settings' ) . '"></span>';
+		}
+		echo '</span>';
 
 		$this->render_memory_status_indicator( $key, $current_value, $recommended );
 	}
 
 	/* ─── Status Indicators ───────────────────── */
 
+	/**
+	 * Get status label and CSS class for a setting value vs recommended.
+	 * Returns: 'low' | 'ok' | 'high' (too high / warning).
+	 */
+	private function get_status_for_value( $key, $current_value, $recommended ) {
+		if ( ! isset( $recommended[ $key ] ) ) {
+			return null;
+		}
+		$rec = $recommended[ $key ];
+		$is_size = in_array( $key, array( 'memory_limit', 'upload_max_filesize', 'post_max_size', 'wp_memory_limit', 'wp_max_memory_limit' ), true );
+		$current_bytes = $is_size ? $this->plugin->convert_to_bytes( $current_value ) : (int) $current_value;
+		$rec_bytes     = $is_size ? $this->plugin->convert_to_bytes( $rec ) : (int) $rec;
+
+		if ( $current_bytes < $rec_bytes ) {
+			return 'low';
+		}
+		$threshold = $is_size ? 1.5 : 2;
+		if ( $rec_bytes > 0 && $current_bytes > $rec_bytes * $threshold ) {
+			return 'high';
+		}
+		return 'ok';
+	}
+
 	private function render_status_indicator( $key, $current_value, $recommended ) {
 		$field_id    = 'easy_php_settings_' . esc_attr( $key );
 		$description = sprintf( esc_html__( 'Current value: %s', 'easy-php-settings' ), esc_html( $current_value ) );
 
 		if ( isset( $recommended[ $key ] ) ) {
-			$rec = $recommended[ $key ];
-			$description .= sprintf( esc_html__( ' | Recommended: %s', 'easy-php-settings' ), esc_html( $rec ) );
-			if ( $this->plugin->convert_to_bytes( $current_value ) < $this->plugin->convert_to_bytes( $rec ) ) {
-				$description .= ' <span style="color: red;" aria-label="' . esc_attr__( 'Low value', 'easy-php-settings' ) . '">' . esc_html__( '(Low)', 'easy-php-settings' ) . '</span>';
+			$rec   = $recommended[ $key ];
+			$desc  = sprintf( esc_html__( ' | Recommended: %s', 'easy-php-settings' ), esc_html( $rec ) );
+			$status = $this->get_status_for_value( $key, $current_value, $recommended );
+			if ( 'low' === $status ) {
+				$description .= $desc . ' <span class="status-badge status-low" aria-label="' . esc_attr__( 'Low value', 'easy-php-settings' ) . '">' . esc_html__( 'Low', 'easy-php-settings' ) . '</span>';
+			} elseif ( 'high' === $status ) {
+				$description .= $desc . ' <span class="status-badge status-high" aria-label="' . esc_attr__( 'Higher than recommended', 'easy-php-settings' ) . '">' . esc_html__( 'Higher than recommended', 'easy-php-settings' ) . '</span>';
 			} else {
-				$description .= ' <span style="color: green;" aria-label="' . esc_attr__( 'OK value', 'easy-php-settings' ) . '">' . esc_html__( '(OK)', 'easy-php-settings' ) . '</span>';
+				$description .= $desc . ' <span class="status-badge status-ok" aria-label="' . esc_attr__( 'OK', 'easy-php-settings' ) . '">' . esc_html__( 'OK', 'easy-php-settings' ) . '</span>';
 			}
 		}
 
@@ -381,12 +429,15 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		$description = sprintf( esc_html__( 'Current value: %s', 'easy-php-settings' ), esc_html( $current_value ) );
 
 		if ( isset( $recommended[ $key ] ) ) {
-			$rec = $recommended[ $key ];
-			$description .= sprintf( esc_html__( ' | Recommended: %s', 'easy-php-settings' ), esc_html( $rec ) );
-			if ( $this->plugin->convert_to_bytes( $current_value ) < $this->plugin->convert_to_bytes( $rec ) ) {
-				$description .= ' <span style="color: red;" aria-label="' . esc_attr__( 'Low value', 'easy-php-settings' ) . '">' . esc_html__( '(Low)', 'easy-php-settings' ) . '</span>';
+			$rec   = $recommended[ $key ];
+			$desc  = sprintf( esc_html__( ' | Recommended: %s', 'easy-php-settings' ), esc_html( $rec ) );
+			$status = $this->get_status_for_value( $key, $current_value, $recommended );
+			if ( 'low' === $status ) {
+				$description .= $desc . ' <span class="status-badge status-low" aria-label="' . esc_attr__( 'Low value', 'easy-php-settings' ) . '">' . esc_html__( 'Low', 'easy-php-settings' ) . '</span>';
+			} elseif ( 'high' === $status ) {
+				$description .= $desc . ' <span class="status-badge status-high" aria-label="' . esc_attr__( 'Higher than recommended', 'easy-php-settings' ) . '">' . esc_html__( 'Higher than recommended', 'easy-php-settings' ) . '</span>';
 			} else {
-				$description .= ' <span style="color: green;" aria-label="' . esc_attr__( 'OK value', 'easy-php-settings' ) . '">' . esc_html__( '(OK)', 'easy-php-settings' ) . '</span>';
+				$description .= $desc . ' <span class="status-badge status-ok" aria-label="' . esc_attr__( 'OK', 'easy-php-settings' ) . '">' . esc_html__( 'OK', 'easy-php-settings' ) . '</span>';
 			}
 		}
 
@@ -407,21 +458,31 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 	}
 
 	private function show_alternative_instructions( $key, $recommended ) {
+		$options    = $this->plugin->get_option( 'easy_php_settings_settings' );
+		$user_value = isset( $options[ $key ] ) ? $options[ $key ] : ( $recommended[ $key ] ?? '128M' );
 		$server_api = php_sapi_name();
-		$rec_value  = $recommended[ $key ] ?? '128M';
 
-		$output  = '<div style="background: #f9f9f9; padding: 10px; border-left: 4px solid #0073aa; margin: 10px 0;">';
-		$output .= '<p style="margin: 0 0 10px 0; font-weight: bold; color: #0073aa;">' . esc_html__( 'Manual Configuration Required', 'easy-php-settings' ) . '</p>';
+		$htaccess_line = 'php_value ' . $key . ' ' . $user_value;
+		$user_ini_line = $key . ' = ' . $user_value;
+		$php_ini_line  = $key . ' = ' . $user_value;
+
+		$block_id = 'easy-php-manual-' . esc_attr( $key );
+		$output   = '<details class="easy-php-manual-config" id="' . $block_id . '">';
+		$output  .= '<summary>' . esc_html__( 'Manual configuration instructions', 'easy-php-settings' ) . '</summary>';
+		$output  .= '<div class="easy-php-manual-config-inner">';
 
 		if ( strpos( $server_api, 'apache' ) !== false || strpos( $server_api, 'cgi' ) !== false ) {
-			$output .= '<div style="margin: 10px 0;"><strong>' . esc_html__( '.htaccess file', 'easy-php-settings' ) . '</strong><br/>';
-			$output .= '<code style="background:#fff;padding:5px;display:block;margin:5px 0;">php_value ' . esc_html( $key ) . ' ' . esc_html( $rec_value ) . '</code></div>';
+			$output .= '<div class="easy-php-config-snippet"><label>' . esc_html__( '.htaccess', 'easy-php-settings' ) . '</label>';
+			$output .= '<div class="easy-php-snippet-row"><code data-copy="' . esc_attr( $htaccess_line ) . '">' . esc_html( $htaccess_line ) . '</code>';
+			$output .= '<button type="button" class="button button-small easy-php-copy-snippet" data-text="' . esc_attr( $htaccess_line ) . '">' . esc_html__( 'Copy', 'easy-php-settings' ) . '</button></div></div>';
 		}
-		$output .= '<div style="margin: 10px 0;"><strong>' . esc_html__( '.user.ini file', 'easy-php-settings' ) . '</strong><br/>';
-		$output .= '<code style="background:#fff;padding:5px;display:block;margin:5px 0;">' . esc_html( $key ) . ' = ' . esc_html( $rec_value ) . '</code></div>';
-		$output .= '<div style="margin: 10px 0;"><strong>' . esc_html__( 'php.ini file', 'easy-php-settings' ) . '</strong><br/>';
-		$output .= '<code style="background:#fff;padding:5px;display:block;margin:5px 0;">' . esc_html( $key ) . ' = ' . esc_html( $rec_value ) . '</code></div>';
-		$output .= '</div>';
+		$output .= '<div class="easy-php-config-snippet"><label>' . esc_html__( '.user.ini', 'easy-php-settings' ) . '</label>';
+		$output .= '<div class="easy-php-snippet-row"><code data-copy="' . esc_attr( $user_ini_line ) . '">' . esc_html( $user_ini_line ) . '</code>';
+		$output .= '<button type="button" class="button button-small easy-php-copy-snippet" data-text="' . esc_attr( $user_ini_line ) . '">' . esc_html__( 'Copy', 'easy-php-settings' ) . '</button></div></div>';
+		$output .= '<div class="easy-php-config-snippet"><label>' . esc_html__( 'php.ini', 'easy-php-settings' ) . '</label>';
+		$output .= '<div class="easy-php-snippet-row"><code data-copy="' . esc_attr( $php_ini_line ) . '">' . esc_html( $php_ini_line ) . '</code>';
+		$output .= '<button type="button" class="button button-small easy-php-copy-snippet" data-text="' . esc_attr( $php_ini_line ) . '">' . esc_html__( 'Copy', 'easy-php-settings' ) . '</button></div></div>';
+		$output .= '</div></details>';
 
 		echo wp_kses_post( $output );
 	}
@@ -472,37 +533,48 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 				</table>
 			</div>
 
-			<p class="submit">
-				<input type="submit" name="submit" id="easy-php-settings-save-button" class="button button-primary button-large" value="<?php echo esc_attr( __( 'Save All Settings', 'easy-php-settings' ) ); ?>" />
-			</p>
+			<div class="easy-php-settings-actions">
+				<p class="submit">
+					<input type="submit" name="submit" id="easy-php-settings-save-button" class="button button-primary button-large" value="<?php echo esc_attr( __( 'Save All Settings', 'easy-php-settings' ) ); ?>" />
+				</p>
+			</div>
 		</form>
 
-		<form action="" method="post" style="margin-top:20px;">
-			<?php wp_nonce_field( 'easy_php_settings_delete_ini_nonce' ); ?>
-			<button type="submit" name="easy_php_settings_delete_ini_files" class="button button-danger" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to delete the .user.ini and php.ini files created by this plugin?', 'easy-php-settings' ) ); ?>');">
-				<?php esc_html_e( 'Delete .ini Files', 'easy-php-settings' ); ?>
-			</button>
-			<p class="description"><?php esc_html_e( 'This will remove the .user.ini and php.ini files from your WordPress root directory.', 'easy-php-settings' ); ?></p>
-		</form>
+		<div class="easy-php-settings-danger-zone">
+			<h3 class="easy-php-danger-title"><?php esc_html_e( 'Danger Zone', 'easy-php-settings' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'Remove configuration files created by this plugin. Use only if you want to revert to server defaults.', 'easy-php-settings' ); ?></p>
+			<form action="" method="post" class="easy-php-delete-form">
+				<?php wp_nonce_field( 'easy_php_settings_delete_ini_nonce' ); ?>
+				<button type="submit" name="easy_php_settings_delete_ini_files" class="button button-secondary easy-php-delete-files-btn" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to delete the .user.ini and php.ini files created by this plugin?', 'easy-php-settings' ) ); ?>');">
+					<?php esc_html_e( 'Delete .ini Files', 'easy-php-settings' ); ?>
+				</button>
+			</form>
+		</div>
 
-		<div style="margin-top:30px;padding:20px;background:#f9f9f9;border-left:4px solid #0073aa;">
+		<div class="easy-php-config-generator-box">
 			<h3><?php esc_html_e( 'Configuration Generator', 'easy-php-settings' ); ?></h3>
-			<p><?php esc_html_e( 'Generate server configuration files with your custom values:', 'easy-php-settings' ); ?></p>
+			<p><?php esc_html_e( 'Generate server configuration files with your custom values.', 'easy-php-settings' ); ?></p>
 			<button type="button" id="generate-config" class="button button-primary"><?php esc_html_e( 'Generate Configuration Files', 'easy-php-settings' ); ?></button>
-			<div id="config-output" style="margin-top:20px;display:none;">
-				<h4><?php esc_html_e( 'Generated Configuration Files:', 'easy-php-settings' ); ?></h4>
-				<div style="margin:15px 0;"><h5><?php esc_html_e( '.user.ini file:', 'easy-php-settings' ); ?></h5>
-					<textarea id="user-ini-content" style="width:100%;height:200px;font-family:monospace;background:#fff;padding:10px;" readonly></textarea>
-					<button type="button" class="button button-secondary" onclick="copyToClipboard('user-ini-content')"><?php esc_html_e( 'Copy to Clipboard', 'easy-php-settings' ); ?></button>
+			<div id="config-output" class="easy-php-config-output">
+				<h4><?php esc_html_e( 'Generated Configuration', 'easy-php-settings' ); ?></h4>
+				<div class="easy-php-config-block">
+					<label><?php esc_html_e( '.user.ini', 'easy-php-settings' ); ?></label>
+					<textarea id="user-ini-content" readonly></textarea>
+					<button type="button" class="button button-secondary easy-php-copy-config" data-target="user-ini-content"><?php esc_html_e( 'Copy to Clipboard', 'easy-php-settings' ); ?></button>
+				</div>
+				<div class="easy-php-config-block" id="htaccess-block">
+					<label><?php esc_html_e( '.htaccess (Apache)', 'easy-php-settings' ); ?></label>
+					<textarea id="htaccess-content" readonly></textarea>
+					<button type="button" class="button button-secondary easy-php-copy-config" data-target="htaccess-content"><?php esc_html_e( 'Copy to Clipboard', 'easy-php-settings' ); ?></button>
 				</div>
 			</div>
 		</div>
 
-		<div style="margin-top:20px;padding:15px;background:#f9f9f9;border-left:4px solid #0073aa;">
+		<div class="easy-php-test-settings-box">
 			<h3><?php esc_html_e( 'Test Settings', 'easy-php-settings' ); ?></h3>
-			<p><?php esc_html_e( 'Click the button below to test if your current settings can be modified at runtime:', 'easy-php-settings' ); ?></p>
+			<p><?php esc_html_e( 'Test if your current settings can be modified at runtime.', 'easy-php-settings' ); ?></p>
 			<button type="button" id="test-settings" class="button button-secondary"><?php esc_html_e( 'Test Settings', 'easy-php-settings' ); ?></button>
-			<div id="test-results" style="margin-top:10px;"></div>
+			<div id="test-results" class="easy-php-test-results"></div>
 		</div>
 		<?php
 	}

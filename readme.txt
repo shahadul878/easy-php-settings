@@ -4,7 +4,7 @@ Contributors: shahadul878,codereyes
 Tags: php settings, ini, performance, debug, wp-config
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 1.2.0
+Stable tag: 1.1.1
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -123,7 +123,7 @@ These switches directly control the debugging constants in your `wp-config.php` 
 
 == Changelog ==
 
-= 1.2.0 =
+= 1.1.1 =
 Released: March 8, 2026
 
 * Added: Plugin usage tracker integration — optional anonymous install/activation reporting to improve plugin services (site URL, WordPress version, plugin version; no personally identifiable data in clear text)
@@ -200,7 +200,7 @@ Released: March 5, 2026
 
 == Upgrade Notice ==
 
-= 1.2.0 =
+= 1.1.1 =
 Adds optional plugin usage tracker for install/activation reporting. An admin notice explains what data is sent.
 
 = 1.0.0 =

@@ -99,14 +99,66 @@ jQuery(document).ready(function($) {
         $('#config-output').show();
     });
 
-    // Copy to clipboard
+    // Copy to clipboard (legacy / config generator)
     window.copyToClipboard = function(elementId) {
         var textarea = document.getElementById(elementId);
         if (!textarea) return;
-        textarea.select();
-        document.execCommand('copy');
-        alert(easy_php_settingsAdminVars.copiedText);
+        var text = textarea.value;
+        if (typeof navigator.clipboard !== 'undefined' && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() {
+                var $btn = $(textarea).siblings('.easy-php-copy-config, button').first();
+                showCopyFeedback($btn);
+            });
+        } else {
+            textarea.select();
+            document.execCommand('copy');
+            alert(easy_php_settingsAdminVars.copiedText);
+        }
     };
+
+    // Config generator copy buttons
+    $(document).on('click', '.easy-php-copy-config', function() {
+        var btn = $(this);
+        var target = btn.data('target');
+        var textarea = document.getElementById(target);
+        if (textarea && textarea.value) {
+            if (typeof navigator.clipboard !== 'undefined' && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textarea.value).then(function() {
+                    showCopyFeedback(btn);
+                });
+            } else {
+                textarea.select();
+                document.execCommand('copy');
+            }
+            showCopyFeedback(btn);
+        }
+    });
+
+    // Copy snippet buttons (manual config)
+    $(document).on('click', '.easy-php-copy-snippet', function() {
+        var btn = $(this);
+        var text = btn.data('text');
+        if (!text) return;
+        if (typeof navigator.clipboard !== 'undefined' && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() {
+                showCopyFeedback(btn);
+            });
+        } else {
+            var $ta = $('<textarea>').val(text).appendTo('body').select();
+            document.execCommand('copy');
+            $ta.remove();
+            showCopyFeedback(btn);
+        }
+    });
+
+    function showCopyFeedback($btn) {
+        if (!$btn || !$btn.length) return;
+        var orig = $btn.text();
+        $btn.text(easy_php_settingsAdminVars.copiedText || 'Copied!').prop('disabled', true);
+        setTimeout(function() {
+            $btn.text(orig).prop('disabled', false);
+        }, 1500);
+    }
 
     // Test Settings
     $('#test-settings').on('click', function() {
@@ -186,22 +238,7 @@ jQuery(document).ready(function($) {
         });
     }
 
-    // Add tooltips to settings fields
-    if (window.easy_php_settingsAdminVars && window.easy_php_settingsAdminVars.tooltips) {
-        $.each(window.easy_php_settingsAdminVars.tooltips, function(key, tooltip) {
-            var input = $('input[name="easy_php_settings_settings[' + key + ']"]');
-            if (input.length) {
-                var helpIcon = $('<span class="dashicons dashicons-editor-help" style="cursor: help; margin-left: 5px; color: #0073aa;" title="' + tooltip + '"></span>');
-                input.after(helpIcon);
-            }
-            // Also add to WP memory settings
-            var wpInput = $('input[name="easy_php_settings_wp_memory_settings[' + key + ']"]');
-            if (wpInput.length) {
-                var wpHelpIcon = $('<span class="dashicons dashicons-editor-help" style="cursor: help; margin-left: 5px; color: #0073aa;" title="' + tooltip + '"></span>');
-                wpInput.after(wpHelpIcon);
-            }
-        });
-    }
+    // Help icons are now rendered server-side with tooltips
 
     // Utility function: Convert value to bytes
     function toBytes(val) {

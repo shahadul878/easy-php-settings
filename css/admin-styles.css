@@ -401,6 +401,16 @@ details[open] summary {
   color: #155724;
 }
 
+.status-badge.status-low {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge.status-high {
+  background: #fff3cd;
+  color: #856404;
+}
+
 .status-badge.warning {
   background: #fff3cd;
   color: #856404;
@@ -409,6 +419,180 @@ details[open] summary {
 .status-badge.error {
   background: #f8d7da;
   color: #721c24;
+}
+
+/* Manual config snippets */
+.easy-php-manual-config {
+  margin: 10px 0;
+  border: 1px solid #c3c4c7;
+  border-radius: 8px;
+  background: #f6f7f7;
+}
+
+.easy-php-manual-config summary {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #1d2327;
+}
+
+.easy-php-manual-config-inner {
+  padding: 12px 14px 14px;
+  border-top: 1px solid #dcdcde;
+}
+
+.easy-php-config-snippet {
+  margin-bottom: 12px;
+}
+
+.easy-php-config-snippet:last-child {
+  margin-bottom: 0;
+}
+
+.easy-php-config-snippet label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #50575e;
+  margin-bottom: 4px;
+}
+
+.easy-php-snippet-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.easy-php-snippet-row code {
+  flex: 1;
+  min-width: 200px;
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  border: 1px solid #dcdcde;
+}
+
+.easy-php-runtime-warning {
+  color: #d63638 !important;
+}
+
+/* Danger zone */
+.easy-php-settings-danger-zone {
+  margin-top: 32px;
+  padding: 20px 24px;
+  background: #fcf0f1;
+  border: 1px solid #f1b4b7;
+  border-radius: 12px;
+}
+
+.easy-php-danger-title {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #721c24;
+}
+
+.easy-php-settings-danger-zone .description {
+  margin-bottom: 12px;
+  color: #50575e;
+}
+
+.easy-php-delete-form {
+  margin: 0;
+}
+
+.easy-php-delete-files-btn {
+  border-color: #d63638 !important;
+  color: #d63638 !important;
+  background: transparent !important;
+}
+
+.easy-php-delete-files-btn:hover {
+  background: #d63638 !important;
+  color: #fff !important;
+  border-color: #d63638 !important;
+}
+
+.easy-php-settings-actions {
+  margin-top: 24px;
+}
+
+/* Field wrap and help icon */
+.easy-php-field-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.easy-php-field-wrap input {
+  max-width: 200px;
+}
+
+.easy-php-help-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: #646970;
+  cursor: help;
+  flex-shrink: 0;
+}
+
+.easy-php-help-icon:hover {
+  color: #2271b1;
+}
+
+/* Config generator and test boxes */
+.easy-php-config-generator-box,
+.easy-php-test-settings-box {
+  margin-top: 28px;
+  padding: 24px;
+  background: #f6f7f7;
+  border: 1px solid #dcdcde;
+  border-left: 4px solid #2271b1;
+  border-radius: 12px;
+}
+
+.easy-php-config-generator-box h3,
+.easy-php-test-settings-box h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.easy-php-config-output {
+  margin-top: 20px;
+  display: none;
+}
+
+.easy-php-config-output h4 {
+  margin-bottom: 16px;
+}
+
+.easy-php-config-block {
+  margin-bottom: 20px;
+}
+
+.easy-php-config-block label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.easy-php-config-block textarea {
+  width: 100%;
+  height: 180px;
+  font-family: monospace;
+  font-size: 13px;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #dcdcde;
+  background: #fff;
+  margin-bottom: 8px;
+}
+
+.easy-php-test-results {
+  margin-top: 12px;
 }
 
 /* ============================================
