@@ -3,7 +3,7 @@
  * Plugin Name: Easy PHP Settings
  * Plugin URI:  https://github.com/easy-php-settings
  * Description: An easy way to manage common PHP INI settings from the WordPress admin panel.
- * Version:     1.1.0
+ * Version:     1.2.0
  * Author:      H M Shahadul Islam
  * Author URI:  https://github.com/shahadul878
  * License:     GPL-2.0+
@@ -33,6 +33,14 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-settings-cache.p
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-module-base.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-module-manager.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-module-loader.php';
+
+require_once plugin_dir_path( __FILE__ ) . 'includes/plugin-tracker-integration.php';
+
+register_activation_hook( __FILE__, function () {
+	if ( function_exists( 'tracker_integration_report_install' ) ) {
+		tracker_integration_report_install( __FILE__ );
+	}
+} );
 
 /**
  * Main plugin orchestrator.
@@ -83,7 +91,7 @@ class Easy_PHP_Settings {
 	/**
 	 * @var string
 	 */
-	private $version = '1.1.0';
+	private $version = '1.2.0';
 
 	/**
 	 * @var array
