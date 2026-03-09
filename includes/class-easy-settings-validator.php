@@ -120,11 +120,11 @@ class Easy_Settings_Validator {
 
 		// Validate reasonable limits.
 		$max_values = array(
-			'' => 1073741824, // 1GB in bytes (no unit = bytes).
-			'K' => 1048576,   // 1GB in KB.
-			'M' => 1024,      // 1GB in MB.
-			'G' => 1,         // 1GB in GB.
-			'T' => 0.001,     // 1GB in TB (very large).
+			''  => 8589934592,  // 8GB in bytes (no unit = bytes).
+			'K' => 8388608,     // 8GB in KB.
+			'M' => 8192,        // 8GB in MB.
+			'G' => 8,           // 8GB in GB.
+			'T' => 0.0078125,   // 8GB in TB.
 		);
 
 		if ( isset( $max_values[ $unit ] ) ) {

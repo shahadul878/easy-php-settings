@@ -33,7 +33,13 @@ class Easy_Module_Tools extends Easy_Module_Base {
 	/* ─── Debugging Settings Registration ─────── */
 
 	public function register_debugging_settings() {
-		register_setting( 'easy_php_settings_debugging', 'easy_php_settings_debugging_settings', array( $this, 'update_wp_config_constants' ) );
+		register_setting(
+			'easy_php_settings_debugging',
+			'easy_php_settings_debugging_settings',
+			array(
+				'sanitize_callback' => array( $this, 'update_wp_config_constants' ),
+			)
+		);
 
 		add_settings_section(
 			'easy_php_settings_debugging_section',
