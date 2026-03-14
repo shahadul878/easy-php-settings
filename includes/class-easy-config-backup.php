@@ -220,10 +220,11 @@ class Easy_Config_Backup {
 			return new WP_Error( 'invalid_php_tag', __( 'Config file must start with <?php tag.', 'easy-php-settings' ) );
 		}
 
-		// Check for basic WordPress constants.
+		// Check for basic WordPress constants (allow flexible spacing/quoting: define('X', define( "X", etc.).
 		$required_constants = array( 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST' );
 		foreach ( $required_constants as $constant ) {
-			if ( strpos( $content, "define( '{$constant}'" ) === false && strpos( $content, 'define( "' . $constant . '"' ) === false ) {
+			$escaped = preg_quote( $constant, '/' );
+			if ( ! preg_match( '/define\s*\(\s*[\'"]' . $escaped . '[\'"]/i', $content ) ) {
 				return new WP_Error( 'missing_constant', sprintf( __( 'Required constant %s not found in config file.', 'easy-php-settings' ), $constant ) );
 			}
 		}

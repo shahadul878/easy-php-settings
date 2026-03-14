@@ -4,7 +4,7 @@ Contributors: shahadul878,codereyes
 Tags: php settings, ini, performance, debug, wp-config
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 1.1.2
+Stable tag: 1.1.3
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -123,6 +123,11 @@ These switches directly control the debugging constants in your `wp-config.php` 
 
 == Changelog ==
 
+= 1.1.3 =
+Released: March 14, 2026
+
+* Fixed: wp-config.php validation now detects required DB_* constants with flexible spacing/quoting, preventing false “DB_NAME not found” errors on some hosts.
+
 = 1.1.2 =
 Released: March 8, 2026
 
@@ -205,6 +210,9 @@ Released: March 5, 2026
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.1.3 =
+Improves wp-config.php validation to avoid false missing DB constants errors on hosts that format define() statements differently.
 
 = 1.1.2 =
 Fixes Debugging Constants switches so they correctly update wp-config.php and removes the old 1G cap on size values, allowing higher limits where supported.
