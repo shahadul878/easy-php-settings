@@ -4,7 +4,7 @@ Contributors: shahadul878,codereyes
 Tags: php settings, ini, performance, debug, wp-config
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 1.1.3
+Stable tag: 1.1.4
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -123,6 +123,11 @@ These switches directly control the debugging constants in your `wp-config.php` 
 
 == Changelog ==
 
+= 1.1.4 =
+Released: March 14, 2026
+
+* Fixed: Removed unbalanced-parentheses validation that caused false "Unbalanced parentheses detected in config file" errors on live servers when wp-config.php contains parentheses inside strings or comments.
+
 = 1.1.3 =
 Released: March 14, 2026
 
@@ -210,6 +215,9 @@ Released: March 5, 2026
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.1.4 =
+Fixes wp-config.php update failing on some live hosts with "Unbalanced parentheses" by removing the unreliable parentheses check.
 
 = 1.1.3 =
 Improves wp-config.php validation to avoid false missing DB constants errors on hosts that format define() statements differently.

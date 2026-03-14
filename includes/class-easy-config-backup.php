@@ -229,13 +229,6 @@ class Easy_Config_Backup {
 			}
 		}
 
-		// Check for balanced parentheses and quotes (basic syntax check).
-		$open_parens  = substr_count( $content, '(' );
-		$close_parens = substr_count( $content, ')' );
-		if ( $open_parens !== $close_parens ) {
-			return new WP_Error( 'unbalanced_parens', __( 'Unbalanced parentheses detected in config file.', 'easy-php-settings' ) );
-		}
-
 		return true;
 	}
 }
