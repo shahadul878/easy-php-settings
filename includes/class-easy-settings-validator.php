@@ -259,7 +259,7 @@ class Easy_Settings_Validator {
 	 * @return string Sanitized value.
 	 */
 	public static function sanitize_setting( $key, $value ) {
-		$value = trim( $value );
+		$value = trim( (string) $value );
 
 		// Security: Strict whitelist - only allow digits and K/M/G/T units
 		// Remove any potentially dangerous characters (everything except allowed chars).
@@ -272,6 +272,137 @@ class Easy_Settings_Validator {
 		}
 
 		return $sanitized;
+	}
+
+	/**
+	 * Directives that must never be writable to .user.ini / php.ini from
+	 * the admin UI. These can lead to arbitrary code execution, sandbox
+	 * escape, or destabilising server-wide configuration.
+	 *
+	 * @return string[]
+	 */
+	public static function blocked_ini_directives() {
+		return array(
+			'auto_prepend_file',
+			'auto_append_file',
+			'extension',
+			'zend_extension',
+			'extension_dir',
+			'open_basedir',
+			'disable_functions',
+			'disable_classes',
+			'sendmail_path',
+			'mail.force_extra_parameters',
+			'include_path',
+			'safe_mode_exec_dir',
+			'curl.cainfo',
+			'openssl.cafile',
+			'openssl.capath',
+			'session.save_path',
+			'sys_temp_dir',
+			'upload_tmp_dir',
+		);
+	}
+
+	/**
+	 * Validate and sanitize a free-form php.ini block (the "Custom PHP
+	 * Configuration" textarea). Strips comment lines and validates each
+	 * directive against the denylist + a directive-name whitelist regex.
+	 *
+	 * @param string $raw Raw textarea content.
+	 * @return array{0: string, 1: string[]} Tuple of [sanitized content, errors].
+	 */
+	public static function sanitize_custom_php_ini( $raw ) {
+		$raw     = (string) $raw;
+		$blocked = array_map( 'strtolower', self::blocked_ini_directives() );
+		$errors  = array();
+		$out     = array();
+
+		// Normalise line endings and split.
+		$lines = preg_split( '/\r\n|\r|\n/', $raw );
+
+		foreach ( $lines as $line ) {
+			$trim = trim( $line );
+
+			// Preserve blank lines and comments verbatim.
+			if ( '' === $trim || 0 === strpos( $trim, ';' ) || 0 === strpos( $trim, '#' ) ) {
+				$out[] = $line;
+				continue;
+			}
+
+			// Section headers like [PHP] are allowed but stripped of any
+			// stray characters; we keep them simple.
+			if ( preg_match( '/^\[[a-z0-9_.\-]+\]$/i', $trim ) ) {
+				$out[] = $line;
+				continue;
+			}
+
+			// Match: directive_name = value
+			// Directive names must match PHP's well-known character class:
+			// letters, digits, underscores, and dots.
+			if ( ! preg_match( '/^([a-z_][a-z0-9_.]*)\s*=\s*(.*)$/i', $trim, $m ) ) {
+				/* translators: %s: rejected line */
+				$errors[] = sprintf( __( 'Skipped invalid php.ini line: %s', 'easy-php-settings' ), $trim );
+				continue;
+			}
+
+			$directive = strtolower( $m[1] );
+			$value     = $m[2];
+
+			if ( in_array( $directive, $blocked, true ) ) {
+				/* translators: %s: directive name */
+				$errors[] = sprintf( __( 'Directive %s is not allowed and was removed for security reasons.', 'easy-php-settings' ), $directive );
+				continue;
+			}
+
+			// Reject value containing any control character or NUL.
+			if ( preg_match( '/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $value ) ) {
+				/* translators: %s: directive name */
+				$errors[] = sprintf( __( 'Directive %s contains control characters and was removed.', 'easy-php-settings' ), $directive );
+				continue;
+			}
+
+			// Strip any trailing inline comment (after a semicolon outside
+			// of quoted strings). Conservative: cut at first unquoted ';'.
+			$cleaned_value = self::strip_inline_comment( $value );
+
+			$out[] = $directive . ' = ' . trim( $cleaned_value );
+		}
+
+		return array( implode( "\n", $out ), $errors );
+	}
+
+	/**
+	 * Cut a php.ini value at the first unquoted semicolon (php.ini inline
+	 * comment marker). Conservative; returns the raw string if no comment.
+	 *
+	 * @param string $value Raw value portion of a directive line.
+	 * @return string
+	 */
+	private static function strip_inline_comment( $value ) {
+		$len    = strlen( $value );
+		$quote  = null;
+		$result = '';
+		for ( $i = 0; $i < $len; $i++ ) {
+			$ch = $value[ $i ];
+			if ( null !== $quote ) {
+				$result .= $ch;
+				if ( $ch === $quote && ( $i === 0 || '\\' !== $value[ $i - 1 ] ) ) {
+					$quote = null;
+				}
+				continue;
+			}
+			if ( '"' === $ch || "'" === $ch ) {
+				$quote   = $ch;
+				$result .= $ch;
+				continue;
+			}
+			if ( ';' === $ch ) {
+				break;
+			}
+			$result .= $ch;
+		}
+		return $result;
 	}
 }
 

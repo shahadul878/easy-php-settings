@@ -71,6 +71,14 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 
 	public function sanitize_callback( $input ) {
 		$old_input = $this->plugin->get_option( 'easy_php_settings_settings', array() );
+
+		// Defense-in-depth capability check: WP's options.php already enforces
+		// it for the registered settings group, but the sanitize callback can
+		// fire from other code paths (filters, WP-CLI option write, REST).
+		if ( ! current_user_can( $this->plugin->get_capability() ) ) {
+			return $old_input;
+		}
+
 		$new_input = array();
 
 		foreach ( $this->plugin->get_settings_keys() as $key ) {
@@ -86,7 +94,11 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		}
 
 		if ( isset( $input['custom_php_ini'] ) ) {
-			$new_input['custom_php_ini'] = trim( $input['custom_php_ini'] );
+			list( $clean_ini, $ini_errors ) = Easy_Settings_Validator::sanitize_custom_php_ini( $input['custom_php_ini'] );
+			$new_input['custom_php_ini']    = $clean_ini;
+			foreach ( $ini_errors as $err ) {
+				Easy_Error_Handler::add_settings_error( 'easy_php_settings_settings', 'custom_php_ini_blocked', $err, 'warning' );
+			}
 		}
 
 		foreach ( Easy_Settings_Validator::validate_settings_relationships( $new_input ) as $error ) {
@@ -112,6 +124,11 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 
 	public function sanitize_wp_memory_callback( $input ) {
 		$old_input = $this->plugin->get_option( 'easy_php_settings_wp_memory_settings', array() );
+
+		if ( ! current_user_can( $this->plugin->get_capability() ) ) {
+			return $old_input;
+		}
+
 		$new_input = array();
 
 		foreach ( $this->plugin->get_wp_memory_settings_keys() as $key ) {
@@ -206,17 +223,29 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		if ( empty( $options ) || ! is_array( $options ) ) {
 			return;
 		}
-		$all = ini_get_all();
+		$all          = ini_get_all();
+		$valid_keys   = $this->plugin->get_settings_keys();
 		foreach ( $options as $key => $value ) {
-			if ( ! in_array( $key, $this->plugin->get_settings_keys(), true ) || empty( $value ) ) {
+			if ( ! in_array( $key, $valid_keys, true ) || empty( $value ) ) {
 				continue;
 			}
+
+			// Re-validate at apply time. Defends against the option being
+			// tampered after save (compromised plugin, manual SQL, multisite
+			// option leakage). Stored values have already been sanitized
+			// through Easy_Settings_Validator::sanitize_setting on save,
+			// but defense-in-depth costs us nothing here.
+			$sanitized = Easy_Settings_Validator::sanitize_setting( $key, $value );
+			if ( '' === $sanitized || is_wp_error( Easy_Settings_Validator::validate_setting( $key, $sanitized ) ) ) {
+				continue;
+			}
+
 			$access = $all[ $key ]['access'] ?? 0;
 			if ( INI_USER !== $access && INI_ALL !== $access ) {
 				continue;
 			}
 			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.PHP.IniSet.Risky
-			@ini_set( $key, $value );
+			@ini_set( $key, $sanitized );
 		}
 	}
 
@@ -289,12 +318,13 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 	/* ─── INI File Delete Action ──────────────── */
 
 	private function handle_ini_file_actions() {
-		if ( ! isset( $_POST['easy_php_settings_delete_ini_files'] ) || ! check_admin_referer( 'easy_php_settings_delete_ini_nonce' ) ) {
+		if ( ! isset( $_POST['easy_php_settings_delete_ini_files'] ) ) {
 			return;
 		}
 		if ( ! current_user_can( $this->plugin->get_capability() ) ) {
-			return;
+			wp_die( esc_html__( 'You do not have sufficient permissions to perform this action.', 'easy-php-settings' ), 403 );
 		}
+		check_admin_referer( 'easy_php_settings_delete_ini_nonce' );
 
 		$result = EasyIniFile::remove_files();
 

@@ -3,7 +3,7 @@
  * Plugin Name: Easy PHP Settings
  * Plugin URI:  https://github.com/easy-php-settings
  * Description: An easy way to manage common PHP INI settings from the WordPress admin panel.
- * Version:     1.1.4
+ * Version:     1.1.5
  * Author:      H M Shahadul Islam
  * Author URI:  https://github.com/shahadul878
  * License:     GPL-2.0+
@@ -38,7 +38,27 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/plugin-tracker-integration.
 
 register_activation_hook( __FILE__, function () {
 	if ( function_exists( 'tracker_integration_report_install' ) ) {
+		// Records the plugin file but does NOT phone home. The first
+		// network call only happens after explicit consent.
 		tracker_integration_report_install( __FILE__ );
+	}
+	// Best-effort: migrate any legacy DB-stored wp-config backups to the
+	// filesystem (where they belong) and clear the option rows.
+	if ( method_exists( 'Easy_Config_Backup', 'migrate_legacy_db_backups' ) ) {
+		Easy_Config_Backup::migrate_legacy_db_backups();
+	}
+
+	// Seed the install timestamp used by the review-request prompt so its
+	// delay window is anchored to the real install date, not first admin
+	// load (which can be much later on staging environments).
+	$install_key = 'easy_php_settings_install_time';
+	$existing    = is_multisite() ? get_site_option( $install_key ) : get_option( $install_key );
+	if ( ! $existing ) {
+		if ( is_multisite() ) {
+			update_site_option( $install_key, time() );
+		} else {
+			update_option( $install_key, time() );
+		}
 	}
 } );
 
@@ -91,7 +111,7 @@ class Easy_PHP_Settings {
 	/**
 	 * @var string
 	 */
-	private $version = '1.1.4';
+	private $version = '1.1.5';
 
 	/**
 	 * @var array
@@ -190,8 +210,11 @@ class Easy_PHP_Settings {
 	 * @return int
 	 */
 	public function convert_to_bytes( $value ) {
-		$value = trim( $value );
-		$last  = strtolower( $value[ strlen( $value ) - 1 ] );
+		$value = trim( (string) $value );
+		if ( '' === $value ) {
+			return 0;
+		}
+		$last  = strtolower( substr( $value, -1 ) );
 		$value = (int) $value;
 		switch ( $last ) {
 			case 'g':
@@ -311,8 +334,6 @@ class Easy_PHP_Settings {
 				'noRowsSelected' => esc_html__( 'No rows selected.', 'easy-php-settings' ),
 				'presets'        => $this->quick_presets,
 				'tooltips'       => $this->setting_tooltips,
-				'ajaxurl'        => admin_url( 'admin-ajax.php' ),
-				'nonce'          => wp_create_nonce( 'easy_php_settings_ajax_nonce' ),
 			)
 		);
 	}
@@ -336,14 +357,7 @@ class Easy_PHP_Settings {
 			return;
 		}
 
-		$active_tab = 'general_settings';
-		$nonce      = isset( $_GET['_wpnonce'] ) ? sanitize_key( wp_unslash( $_GET['_wpnonce'] ) ) : null;
-		if ( isset( $_GET['tab'] ) && wp_verify_nonce( $nonce, 'easy_php_settings_tab_nonce' ) ) {
-			$active_tab = sanitize_key( wp_unslash( $_GET['tab'] ) );
-		}
-
-		$tab_nonce_url = wp_create_nonce( 'easy_php_settings_tab_nonce' );
-		$admin_tabs    = $this->module_manager->get_admin_tabs();
+		$admin_tabs = $this->module_manager->get_admin_tabs();
 
 		$tab_order    = array( 'general_settings', 'tools', 'php_settings', 'extensions', 'status', 'about' );
 		$ordered_tabs = array();
@@ -357,6 +371,14 @@ class Easy_PHP_Settings {
 				$ordered_tabs[ $id ] = $cfg;
 			}
 		}
+
+		// Tab navigation is read-only: no nonce needed (a nonce would only
+		// add UX friction since they expire after ~24h, and nonces are not
+		// an authorization mechanism). Whitelist against known tab IDs.
+		$active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general_settings';
+		if ( ! isset( $ordered_tabs[ $active_tab ] ) ) {
+			$active_tab = 'general_settings';
+		}
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
@@ -364,7 +386,7 @@ class Easy_PHP_Settings {
 
 			<h2 class="nav-tab-wrapper">
 				<?php foreach ( $ordered_tabs as $id => $cfg ) : ?>
-					<a href="?page=easy-php-settings&tab=<?php echo esc_attr( $id ); ?>&_wpnonce=<?php echo esc_attr( $tab_nonce_url ); ?>"
+					<a href="<?php echo esc_url( add_query_arg( array( 'page' => 'easy-php-settings', 'tab' => $id ), admin_url( 'tools.php' ) ) ); ?>"
 					   class="nav-tab <?php echo $id === $active_tab ? 'nav-tab-active' : ''; ?>">
 						<?php echo esc_html( $cfg['title'] ); ?>
 					</a>

@@ -26,8 +26,36 @@ class Easy_Module_Tools extends Easy_Module_Base {
 
 	public function handle_admin_actions() {
 		$this->handle_log_actions();
+		$this->handle_log_download();
 		$this->handle_export_import();
 		$this->handle_reset_actions();
+	}
+
+	/**
+	 * Stream the full debug.log to the browser as a download. Avoids
+	 * loading the entire file into memory.
+	 */
+	private function handle_log_download() {
+		if ( empty( $_GET['easy_php_settings_download_log'] ) ) {
+			return;
+		}
+		if ( ! current_user_can( $this->plugin->get_capability() ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to perform this action.', 'easy-php-settings' ), 403 );
+		}
+		check_admin_referer( 'easy_php_settings_download_log_nonce' );
+
+		$log_file = WP_CONTENT_DIR . '/debug.log';
+		if ( ! file_exists( $log_file ) || ! is_readable( $log_file ) ) {
+			wp_die( esc_html__( 'Debug log not found.', 'easy-php-settings' ), 404 );
+		}
+
+		nocache_headers();
+		header( 'Content-Type: text/plain; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="debug-' . gmdate( 'Y-m-d-His' ) . '.log"' );
+		header( 'Content-Length: ' . filesize( $log_file ) );
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		readfile( $log_file );
+		exit;
 	}
 
 	/* ─── Debugging Settings Registration ─────── */
@@ -84,6 +112,13 @@ class Easy_Module_Tools extends Easy_Module_Base {
 	/* ─── Update wp-config.php debugging constants ─ */
 
 	public function update_wp_config_constants( $input ) {
+		// Defense-in-depth capability check: refuse to touch wp-config.php
+		// from a callback that lacks the right permission, regardless of
+		// how WP arrived here.
+		if ( ! current_user_can( $this->plugin->get_capability() ) ) {
+			return get_option( 'easy_php_settings_debugging_settings', array() );
+		}
+
 		global $wp_filesystem;
 		if ( ! $wp_filesystem ) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -155,11 +190,12 @@ class Easy_Module_Tools extends Easy_Module_Base {
 		if ( ! isset( $_POST['easy_php_settings_clear_log'] ) || '1' !== $_POST['easy_php_settings_clear_log'] ) {
 			return;
 		}
-		check_admin_referer( 'easy_php_settings_clear_log_nonce' );
 
+		// Capability check first (cheap, no side effects), then nonce.
 		if ( ! current_user_can( $this->plugin->get_capability() ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to perform this action.', 'easy-php-settings' ) );
+			wp_die( esc_html__( 'You do not have sufficient permissions to perform this action.', 'easy-php-settings' ), 403 );
 		}
+		check_admin_referer( 'easy_php_settings_clear_log_nonce' );
 
 		global $wp_filesystem;
 		if ( ! $wp_filesystem ) {
@@ -197,10 +233,11 @@ class Easy_Module_Tools extends Easy_Module_Base {
 	/* ─── Export / Import ─────────────────────── */
 
 	private function handle_export_import() {
-		if ( isset( $_POST['easy_php_settings_export'] ) && check_admin_referer( 'easy_php_settings_export_nonce' ) ) {
+		if ( isset( $_POST['easy_php_settings_export'] ) ) {
 			if ( ! current_user_can( $this->plugin->get_capability() ) ) {
-				return;
+				wp_die( esc_html__( 'You do not have sufficient permissions to perform this action.', 'easy-php-settings' ), 403 );
 			}
+			check_admin_referer( 'easy_php_settings_export_nonce' );
 			$data = array(
 				'php_settings'    => $this->plugin->get_option( 'easy_php_settings_settings', array() ),
 				'wp_memory'       => $this->plugin->get_option( 'easy_php_settings_wp_memory_settings', array() ),
@@ -214,10 +251,11 @@ class Easy_Module_Tools extends Easy_Module_Base {
 			exit;
 		}
 
-		if ( isset( $_POST['easy_php_settings_import'] ) && check_admin_referer( 'easy_php_settings_import_nonce' ) ) {
+		if ( isset( $_POST['easy_php_settings_import'] ) ) {
 			if ( ! current_user_can( $this->plugin->get_capability() ) ) {
-				return;
+				wp_die( esc_html__( 'You do not have sufficient permissions to perform this action.', 'easy-php-settings' ), 403 );
 			}
+			check_admin_referer( 'easy_php_settings_import_nonce' );
 			if ( ! isset( $_FILES['import_file'] ) || empty( $_FILES['import_file']['tmp_name'] ) ) {
 				Easy_Error_Handler::add_settings_error( 'easy_php_settings_settings', 'import_no_file', __( 'No file selected for import.', 'easy-php-settings' ), 'error' );
 				return;
@@ -243,14 +281,40 @@ class Easy_Module_Tools extends Easy_Module_Base {
 					throw new Exception( __( 'Invalid settings file format.', 'easy-php-settings' ) );
 				}
 				if ( isset( $settings['php_settings'] ) && is_array( $settings['php_settings'] ) ) {
+					$clean_php = array();
 					foreach ( $settings['php_settings'] as $key => $value ) {
-						if ( in_array( $key, $this->plugin->get_settings_keys(), true ) ) {
-							$v = Easy_Settings_Validator::validate_setting( $key, $value );
-							if ( is_wp_error( $v ) ) {
-								throw new Exception( sprintf( __( 'Invalid value for %s: %s', 'easy-php-settings' ), $key, $v->get_error_message() ) );
-							}
+						if ( ! in_array( $key, $this->plugin->get_settings_keys(), true ) && 'custom_php_ini' !== $key ) {
+							continue; // Drop unknown keys silently.
 						}
+						if ( 'custom_php_ini' === $key ) {
+							list( $clean_ini, ) = Easy_Settings_Validator::sanitize_custom_php_ini( $value );
+							$clean_php['custom_php_ini'] = $clean_ini;
+							continue;
+						}
+						$sanitized = Easy_Settings_Validator::sanitize_setting( $key, $value );
+						$v         = Easy_Settings_Validator::validate_setting( $key, $sanitized );
+						if ( is_wp_error( $v ) ) {
+							throw new Exception( sprintf( __( 'Invalid value for %s: %s', 'easy-php-settings' ), $key, $v->get_error_message() ) );
+						}
+						$clean_php[ $key ] = $sanitized;
 					}
+					$settings['php_settings'] = $clean_php;
+				}
+
+				if ( isset( $settings['wp_memory'] ) && is_array( $settings['wp_memory'] ) ) {
+					$clean_mem = array();
+					foreach ( $settings['wp_memory'] as $key => $value ) {
+						if ( ! in_array( $key, $this->plugin->get_wp_memory_settings_keys(), true ) ) {
+							continue;
+						}
+						$sanitized = Easy_Settings_Validator::sanitize_setting( $key, $value );
+						$v         = Easy_Settings_Validator::validate_wp_memory_setting( $key, $sanitized );
+						if ( is_wp_error( $v ) ) {
+							throw new Exception( sprintf( __( 'Invalid value for %s: %s', 'easy-php-settings' ), $key, $v->get_error_message() ) );
+						}
+						$clean_mem[ $key ] = $sanitized;
+					}
+					$settings['wp_memory'] = $clean_mem;
 				}
 
 				$this->plugin->update_option( 'easy_php_settings_import_backup', array(
@@ -277,19 +341,21 @@ class Easy_Module_Tools extends Easy_Module_Base {
 	/* ─── Reset Actions ───────────────────────── */
 
 	private function handle_reset_actions() {
-		if ( isset( $_POST['easy_php_settings_reset_recommended'] ) && check_admin_referer( 'easy_php_settings_reset_nonce' ) ) {
+		if ( isset( $_POST['easy_php_settings_reset_recommended'] ) ) {
 			if ( ! current_user_can( $this->plugin->get_capability() ) ) {
-				return;
+				wp_die( esc_html__( 'You do not have sufficient permissions to perform this action.', 'easy-php-settings' ), 403 );
 			}
+			check_admin_referer( 'easy_php_settings_reset_nonce' );
 			$this->plugin->update_option( 'easy_php_settings_reset_backup', $this->plugin->get_option( 'easy_php_settings_settings', array() ) );
 			$this->plugin->update_option( 'easy_php_settings_settings', $this->plugin->get_recommended_values() );
 			add_settings_error( 'easy_php_settings_settings', 'reset_success', __( 'Settings reset to recommended values. A backup was created.', 'easy-php-settings' ), 'updated' );
 		}
 
-		if ( isset( $_POST['easy_php_settings_reset_default'] ) && check_admin_referer( 'easy_php_settings_reset_nonce' ) ) {
+		if ( isset( $_POST['easy_php_settings_reset_default'] ) ) {
 			if ( ! current_user_can( $this->plugin->get_capability() ) ) {
-				return;
+				wp_die( esc_html__( 'You do not have sufficient permissions to perform this action.', 'easy-php-settings' ), 403 );
 			}
+			check_admin_referer( 'easy_php_settings_reset_nonce' );
 			$this->plugin->update_option( 'easy_php_settings_reset_backup', $this->plugin->get_option( 'easy_php_settings_settings', array() ) );
 			$this->plugin->delete_option( 'easy_php_settings_settings' );
 			add_settings_error( 'easy_php_settings_settings', 'reset_default_success', __( 'Settings cleared. Server defaults will now apply. A backup was created.', 'easy-php-settings' ), 'updated' );
@@ -392,22 +458,68 @@ class Easy_Module_Tools extends Easy_Module_Base {
 			return;
 		}
 
-		$log_file    = WP_CONTENT_DIR . '/debug.log';
-		$log_content = '';
+		$log_file       = WP_CONTENT_DIR . '/debug.log';
+		$log_content    = '';
+		$total_size     = 0;
+		$tail_threshold = 65536; // 64 KB.
+		$truncated      = false;
 
 		if ( $wp_filesystem->exists( $log_file ) && $wp_filesystem->is_readable( $log_file ) ) {
-			$log_content = $wp_filesystem->get_contents( $log_file );
-			if ( empty( $log_content ) ) {
+			$total_size = (int) filesize( $log_file );
+			if ( 0 === $total_size ) {
 				echo '<div class="notice notice-info"><p>' . esc_html__( 'The debug log file is empty.', 'easy-php-settings' ) . '</p></div>';
+			} else {
+				$fp = fopen( $log_file, 'rb' );
+				if ( $fp ) {
+					$start = max( 0, $total_size - $tail_threshold );
+					if ( $start > 0 ) {
+						fseek( $fp, $start );
+						// Skip a partial first line for clean reading.
+						fgets( $fp );
+						$truncated = true;
+					}
+					$log_content = stream_get_contents( $fp );
+					fclose( $fp );
+				}
 			}
 		} else {
 			echo '<div class="notice notice-info"><p>' . esc_html__( 'The debug log file does not exist yet.', 'easy-php-settings' ) . '</p></div>';
 		}
+
+		$download_url = wp_nonce_url(
+			add_query_arg(
+				array(
+					'page'                            => 'easy-php-settings',
+					'tab'                             => 'tools',
+					'easy_php_settings_download_log'  => '1',
+				),
+				admin_url( 'tools.php' )
+			),
+			'easy_php_settings_download_log_nonce'
+		);
 		?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'tools.php?page=easy-php-settings&tab=tools' ) ); ?>" style="margin-bottom:15px;">
+		<form method="post" action="<?php echo esc_url( admin_url( 'tools.php?page=easy-php-settings&tab=tools' ) ); ?>" style="margin-bottom:15px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
 			<?php wp_nonce_field( 'easy_php_settings_clear_log_nonce' ); ?>
 			<input type="hidden" name="easy_php_settings_clear_log" value="1">
 			<input type="submit" id="easy-php-settings-clear-log-button" class="button button-danger" value="<?php esc_attr_e( 'Clear Log File', 'easy-php-settings' ); ?>" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to permanently delete the debug log?', 'easy-php-settings' ) ); ?>');">
+			<?php if ( $total_size > 0 ) : ?>
+				<a href="<?php echo esc_url( $download_url ); ?>" class="button"><?php esc_html_e( 'Download full log', 'easy-php-settings' ); ?></a>
+				<span style="color:#646970;font-size:13px;">
+					<?php
+					if ( $truncated ) {
+						echo esc_html(
+							sprintf(
+								/* translators: %s: file size */
+								__( 'Showing last 64 KB of %s', 'easy-php-settings' ),
+								size_format( $total_size )
+							)
+						);
+					} else {
+						echo esc_html( sprintf( /* translators: %s: file size */ __( 'Size: %s', 'easy-php-settings' ), size_format( $total_size ) ) );
+					}
+					?>
+				</span>
+			<?php endif; ?>
 		</form>
 		<textarea id="easy_php_settings-log-viewer" style="width:100%;height:500px;font-family:monospace;" readonly><?php echo esc_textarea( $log_content ); ?></textarea>
 		<?php

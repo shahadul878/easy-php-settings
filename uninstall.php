@@ -44,7 +44,7 @@ foreach ( $option_keys as $key ) {
 	$delete_option_fn( $key );
 }
 
-// Config backups (option names like easy_php_settings_config_backup_1234567890).
+// Legacy config backups (DB-stored, removed in 1.1.5+).
 if ( $is_multisite ) {
 	$wpdb->query(
 		$wpdb->prepare(
@@ -61,6 +61,21 @@ if ( $is_multisite ) {
 	);
 }
 
+// Filesystem-stored config backups directory (wp-content/uploads/easy-php-settings-backups/).
+$uploads = wp_upload_dir( null, false );
+if ( empty( $uploads['error'] ) && ! empty( $uploads['basedir'] ) ) {
+	$backup_dir = trailingslashit( $uploads['basedir'] ) . 'easy-php-settings-backups';
+	if ( is_dir( $backup_dir ) ) {
+		$entries = glob( trailingslashit( $backup_dir ) . '*' ) ?: array();
+		foreach ( $entries as $entry ) {
+			if ( is_file( $entry ) ) {
+				@unlink( $entry );
+			}
+		}
+		@rmdir( $backup_dir );
+	}
+}
+
 // Plugin transients (easy_php_settings_cache_*, easy_php_settings_log_cleared).
 // Transients are stored as _transient_* and _transient_timeout_* in options.
 $wpdb->query(
@@ -71,7 +86,7 @@ $wpdb->query(
 	)
 );
 
-// Plugin Tracker integration: cron and options.
+// Plugin Tracker integration: cron, consent state, and options.
 $main_plugin_file = dirname( __FILE__ ) . '/class-easy-php-settings.php';
 $basename        = plugin_basename( $main_plugin_file );
 $cron_option     = 'plugin_tracker_cron_' . md5( $basename );
@@ -80,6 +95,11 @@ $hook_name       = 'plugin_tracker_ping_' . preg_replace( '/[^a-z0-9_-]/i', '_',
 wp_clear_scheduled_hook( $hook_name );
 delete_option( $cron_option );
 delete_option( 'plugin_tracker_plugin_file' );
+delete_option( 'plugin_tracker_consent' );
+delete_option( 'plugin_tracker_consent_time' );
+
+// Best-effort: notify a denied state so the tracker can stop sending.
+$wpdb->delete( $wpdb->usermeta, array( 'meta_key' => 'plugin_tracker_notice_dismissed' ) );
 
 // Plugin Tracker transients.
 $wpdb->query(

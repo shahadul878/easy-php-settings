@@ -81,6 +81,13 @@ class Easy_Module_About extends Easy_Module_Base {
 				</div>
 			</div>
 
+			<?php if ( function_exists( 'tracker_integration_render_consent_panel' ) ) : ?>
+			<div class="easy-php-about-card">
+				<h3 class="easy-php-about-card-title"><span class="dashicons dashicons-privacy"></span> <?php esc_html_e( 'Privacy & Data Sharing', 'easy-php-settings' ); ?></h3>
+				<?php tracker_integration_render_consent_panel(); ?>
+			</div>
+			<?php endif; ?>
+
 			<div class="easy-php-about-card">
 				<h3 class="easy-php-about-card-title"><span class="dashicons dashicons-sos"></span> <?php esc_html_e( 'Support & Feedback', 'easy-php-settings' ); ?></h3>
 				<div class="easy-php-about-section">

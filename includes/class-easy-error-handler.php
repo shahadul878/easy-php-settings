@@ -54,7 +54,9 @@ class Easy_Error_Handler {
 			'message'   => $message,
 			'context'   => $context,
 			'user_id'   => get_current_user_id(),
-			'ip'        => self::get_client_ip(),
+			// Store a salted hash so log entries can correlate without
+			// retaining raw IP addresses (GDPR-friendly default).
+			'ip_hash'   => self::get_client_ip_hash(),
 		);
 
 		$logs = self::get_logs();
@@ -149,14 +151,31 @@ class Easy_Error_Handler {
 	}
 
 	/**
-	 * Get client IP address
+	 * Get a stable, salted hash of the current client IP. Hashing makes
+	 * the log entry useful for correlation (same hash = same client) but
+	 * removes the raw IP from at-rest storage.
 	 *
-	 * @return string IP address.
+	 * @return string 16-character hex prefix of sha256( ip || wp_salt('auth') ).
 	 */
-	private static function get_client_ip() {
+	private static function get_client_ip_hash() {
+		$ip = self::get_raw_client_ip();
+		if ( '0.0.0.0' === $ip ) {
+			return '';
+		}
+		$salt = function_exists( 'wp_salt' ) ? wp_salt( 'auth' ) : '';
+		return substr( hash( 'sha256', $ip . '|' . $salt ), 0, 16 );
+	}
+
+	/**
+	 * Resolve the raw client IP from common proxy headers. Used only as
+	 * input to hashing; never persisted.
+	 *
+	 * @return string
+	 */
+	private static function get_raw_client_ip() {
 		$ip_keys = array(
 			'HTTP_CF_CONNECTING_IP', // Cloudflare.
-			'HTTP_X_REAL_IP', // Nginx proxy.
+			'HTTP_X_REAL_IP',        // Nginx proxy.
 			'HTTP_X_FORWARDED_FOR',
 			'REMOTE_ADDR',
 		);
@@ -164,7 +183,6 @@ class Easy_Error_Handler {
 		foreach ( $ip_keys as $key ) {
 			if ( ! empty( $_SERVER[ $key ] ) ) {
 				$ip = sanitize_text_field( wp_unslash( $_SERVER[ $key ] ) );
-				// Handle comma-separated IPs (X-Forwarded-For).
 				if ( strpos( $ip, ',' ) !== false ) {
 					$ip = explode( ',', $ip );
 					$ip = trim( $ip[0] );

@@ -58,6 +58,9 @@ class EasyIniFile {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 			WP_Filesystem();
 		}
+		if ( ! $wp_filesystem ) {
+			return new WP_Error( 'filesystem_unavailable', __( 'WordPress filesystem could not be initialised.', 'easy-php-settings' ) );
+		}
 
 		// Validate content size (max 1MB).
 		if ( strlen( $content ) > 1048576 ) {
@@ -67,49 +70,32 @@ class EasyIniFile {
 		$files_written = array();
 		$dir_path      = self::get_dir_path();
 
-		// Validate directory path to prevent directory traversal.
-		$real_dir_path = realpath( $dir_path );
-		if ( false === $real_dir_path || strpos( $real_dir_path, realpath( ABSPATH ) ) !== 0 ) {
-			return new WP_Error( 'invalid_path', __( 'Invalid directory path.', 'easy-php-settings' ) );
-		}
-
-		// Check if directory is writable.
+		// File paths here are constants (ABSPATH . '.user.ini' / 'php.ini'),
+		// not user-controlled — no path-traversal vector to defend against.
+		// We just verify the directory is writable.
 		if ( ! $wp_filesystem->is_writable( $dir_path ) ) {
 			return new WP_Error( 'directory_not_writable', __( 'Directory is not writable.', 'easy-php-settings' ) );
 		}
 
 		foreach ( self::get_ini_file_names() as $filepath ) {
 			try {
-				// Validate file path.
-				$real_filepath = realpath( dirname( $filepath ) );
-				if ( false === $real_filepath || strpos( $real_filepath, $real_dir_path ) !== 0 ) {
-					continue; // Skip invalid paths.
-				}
-
-				// Use atomic write: write to temp file first, then move.
+				// Atomic-ish write: write to temp file, then move.
 				$temp_filepath = $filepath . '.tmp';
 				$write_result  = $wp_filesystem->put_contents( $temp_filepath, $content );
 
 				if ( $write_result ) {
-					// Move temp file to final location.
 					if ( $wp_filesystem->exists( $filepath ) ) {
 						$wp_filesystem->delete( $filepath );
 					}
 					$wp_filesystem->move( $temp_filepath, $filepath );
-
-					// Set appropriate file permissions (644).
 					$wp_filesystem->chmod( $filepath, 0644 );
-
 					$files_written[] = basename( $filepath );
-				} else {
-					// Clean up temp file if write failed.
-					if ( $wp_filesystem->exists( $temp_filepath ) ) {
-						$wp_filesystem->delete( $temp_filepath );
-					}
+				} elseif ( $wp_filesystem->exists( $temp_filepath ) ) {
+					$wp_filesystem->delete( $temp_filepath );
 				}
 			} catch ( Exception $e ) {
 				Easy_Error_Handler::handle_exception( $e, "write_ini_file: {$filepath}" );
-				continue; // Continue with next file.
+				continue;
 			}
 		}
 
@@ -127,37 +113,28 @@ class EasyIniFile {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
 			WP_Filesystem();
 		}
+		if ( ! $wp_filesystem ) {
+			return new WP_Error( 'filesystem_unavailable', __( 'WordPress filesystem could not be initialised.', 'easy-php-settings' ) );
+		}
 
 		$files_deleted = array();
-		$dir_path      = self::get_dir_path();
-
-		// Validate directory path.
-		$real_dir_path = realpath( $dir_path );
-		if ( false === $real_dir_path || strpos( $real_dir_path, realpath( ABSPATH ) ) !== 0 ) {
-			return new WP_Error( 'invalid_path', __( 'Invalid directory path.', 'easy-php-settings' ) );
-		}
 
 		foreach ( self::get_ini_file_names() as $filepath ) {
 			try {
-				// Validate file path.
-				$real_filepath = realpath( dirname( $filepath ) );
-				if ( false === $real_filepath || strpos( $real_filepath, $real_dir_path ) !== 0 ) {
-					continue; // Skip invalid paths.
+				// Defensive: only ever touch files whose basename matches
+				// one of the two we manage. The list itself is hardcoded,
+				// but this guards future refactors from accidentally
+				// deleting unrelated files.
+				$basename = basename( $filepath );
+				if ( ! in_array( $basename, array( '.user.ini', 'php.ini' ), true ) ) {
+					continue;
 				}
-
-				// Only delete files that exist and are within our allowed directory.
-				if ( $wp_filesystem->exists( $filepath ) ) {
-					// Double-check the file is actually an INI file we created.
-					$basename = basename( $filepath );
-					if ( in_array( $basename, array( '.user.ini', 'php.ini' ), true ) ) {
-						if ( $wp_filesystem->delete( $filepath ) ) {
-							$files_deleted[] = $basename;
-						}
-					}
+				if ( $wp_filesystem->exists( $filepath ) && $wp_filesystem->delete( $filepath ) ) {
+					$files_deleted[] = $basename;
 				}
 			} catch ( Exception $e ) {
 				Easy_Error_Handler::handle_exception( $e, "remove_ini_file: {$filepath}" );
-				continue; // Continue with next file.
+				continue;
 			}
 		}
 

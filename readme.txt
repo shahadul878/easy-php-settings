@@ -4,7 +4,7 @@ Contributors: shahadul878,codereyes
 Tags: php settings, ini, performance, debug, wp-config
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 1.1.4
+Stable tag: 1.1.5
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -123,6 +123,11 @@ These switches directly control the debugging constants in your `wp-config.php` 
 
 == Changelog ==
 
+= 1.1.5 =
+Released: May 27, 2026
+
+* Added: Admin notice asking the user to leave a 5-star review on WordPress.org after the plugin has been installed for 7 days. Includes "Rate now", "Maybe later" (7-day snooze), and "Already did / Don't show again" actions.
+
 = 1.1.4 =
 Released: March 14, 2026
 
@@ -215,6 +220,9 @@ Released: March 5, 2026
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.1.5 =
+Adds a friendly admin notice asking long-time users to leave a 5-star review on WordPress.org. Includes snooze and dismiss options.
 
 = 1.1.4 =
 Fixes wp-config.php update failing on some live hosts with "Unbalanced parentheses" by removing the unreliable parentheses check.
