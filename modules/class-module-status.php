@@ -48,64 +48,89 @@ class Easy_Module_Status extends Easy_Module_Base {
 		);
 		?>
 		<div id="status-tab">
-			<h3><?php esc_html_e( 'PHP Configuration Status', 'easy-php-settings' ); ?></h3>
-			<table class="wp-list-table widefat fixed striped">
-				<thead><tr>
-					<th scope="col"><?php esc_html_e( 'Setting', 'easy-php-settings' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Current Value', 'easy-php-settings' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Recommended', 'easy-php-settings' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Changeable', 'easy-php-settings' ); ?></th>
-				</tr></thead>
-				<tbody>
-				<?php foreach ( $settings_keys as $key ) :
-					$current = ini_get( $key );
-					$rec     = $recommended[ $key ] ?? 'N/A';
-					$access  = $all_settings[ $key ]['access'] ?? 0;
-					$ok      = ( INI_USER === $access || INI_ALL === $access );
-				?>
-				<tr>
-					<td><strong><?php echo esc_html( ucwords( str_replace( '_', ' ', $key ) ) ); ?></strong></td>
-					<td><?php echo esc_html( $current ); ?></td>
-					<td><?php echo esc_html( $rec ); ?></td>
-					<td><?php echo $ok ? '<span style="color:green;">' . esc_html__( 'Yes', 'easy-php-settings' ) . '</span>' : '<span style="color:red;">' . esc_html__( 'No', 'easy-php-settings' ) . '</span>'; ?></td>
-				</tr>
-				<?php endforeach; ?>
-				</tbody>
-			</table>
+			<div class="easy-php-section-card">
+				<div class="easy-php-section-card__header">
+					<h3 class="easy-php-section-card__title"><span class="dashicons dashicons-performance"></span> <?php esc_html_e( 'PHP Configuration Status', 'easy-php-settings' ); ?></h3>
+					<p class="description"><?php esc_html_e( 'Compare current PHP values against recommended limits for WordPress.', 'easy-php-settings' ); ?></p>
+				</div>
+				<div class="easy-php-data-table-wrap">
+					<table class="easy-php-data-table">
+						<thead><tr>
+							<th scope="col"><?php esc_html_e( 'Setting', 'easy-php-settings' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Current Value', 'easy-php-settings' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Recommended', 'easy-php-settings' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Changeable', 'easy-php-settings' ); ?></th>
+						</tr></thead>
+						<tbody>
+						<?php foreach ( $settings_keys as $key ) :
+							$current = ini_get( $key );
+							$rec     = $recommended[ $key ] ?? 'N/A';
+							$access  = $all_settings[ $key ]['access'] ?? 0;
+							$ok      = ( INI_USER === $access || INI_ALL === $access );
+						?>
+						<tr>
+							<td><code><?php echo esc_html( $key ); ?></code></td>
+							<td><?php echo esc_html( $current ); ?></td>
+							<td><?php echo esc_html( $rec ); ?></td>
+							<td>
+								<?php if ( $ok ) : ?>
+									<span class="easy-php-badge easy-php-badge--success"><?php esc_html_e( 'Yes', 'easy-php-settings' ); ?></span>
+								<?php else : ?>
+									<span class="easy-php-badge easy-php-badge--danger"><?php esc_html_e( 'No', 'easy-php-settings' ); ?></span>
+								<?php endif; ?>
+							</td>
+						</tr>
+						<?php endforeach; ?>
+						</tbody>
+					</table>
+				</div>
+			</div>
 
-			<h3 style="margin-top:30px;"><?php esc_html_e( 'WordPress Memory Status', 'easy-php-settings' ); ?></h3>
-			<table class="wp-list-table widefat fixed striped">
-				<thead><tr>
-					<th scope="col"><?php esc_html_e( 'Setting', 'easy-php-settings' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Current Value', 'easy-php-settings' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Recommended', 'easy-php-settings' ); ?></th>
-				</tr></thead>
-				<tbody>
-				<?php foreach ( $wp_mem_keys as $key ) : ?>
-				<tr>
-					<td><strong><?php echo esc_html( strtoupper( $key ) ); ?></strong></td>
-					<td><?php echo esc_html( $this->get_wp_memory_value( $key ) ); ?></td>
-					<td><?php echo esc_html( $wp_mem_rec[ $key ] ?? 'N/A' ); ?></td>
-				</tr>
-				<?php endforeach; ?>
-				</tbody>
-			</table>
+			<div class="easy-php-section-card">
+				<div class="easy-php-section-card__header">
+					<h3 class="easy-php-section-card__title"><span class="dashicons dashicons-wordpress"></span> <?php esc_html_e( 'WordPress Memory Status', 'easy-php-settings' ); ?></h3>
+				</div>
+				<div class="easy-php-data-table-wrap">
+					<table class="easy-php-data-table">
+						<thead><tr>
+							<th scope="col"><?php esc_html_e( 'Setting', 'easy-php-settings' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Current Value', 'easy-php-settings' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Recommended', 'easy-php-settings' ); ?></th>
+						</tr></thead>
+						<tbody>
+						<?php foreach ( $wp_mem_keys as $key ) : ?>
+						<tr>
+							<td><code><?php echo esc_html( strtoupper( $key ) ); ?></code></td>
+							<td><?php echo esc_html( $this->get_wp_memory_value( $key ) ); ?></td>
+							<td><?php echo esc_html( $wp_mem_rec[ $key ] ?? 'N/A' ); ?></td>
+						</tr>
+						<?php endforeach; ?>
+						</tbody>
+					</table>
+				</div>
+			</div>
 
-			<h3 style="margin-top:30px;"><?php esc_html_e( 'Server Status', 'easy-php-settings' ); ?></h3>
-			<table class="wp-list-table widefat fixed striped">
-				<thead><tr>
-					<th scope="col"><?php esc_html_e( 'Metric', 'easy-php-settings' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Value', 'easy-php-settings' ); ?></th>
-				</tr></thead>
-				<tbody>
-				<?php foreach ( $server_info as $metric => $val ) : ?>
-				<tr>
-					<td><strong><?php echo esc_html( $metric ); ?></strong></td>
-					<td><?php echo esc_html( $val ); ?></td>
-				</tr>
-				<?php endforeach; ?>
-				</tbody>
-			</table>
+			<div class="easy-php-section-card">
+				<div class="easy-php-section-card__header">
+					<h3 class="easy-php-section-card__title"><span class="dashicons dashicons-chart-bar"></span> <?php esc_html_e( 'Server Status', 'easy-php-settings' ); ?></h3>
+				</div>
+				<div class="easy-php-data-table-wrap">
+					<table class="easy-php-data-table">
+						<thead><tr>
+							<th scope="col"><?php esc_html_e( 'Metric', 'easy-php-settings' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Value', 'easy-php-settings' ); ?></th>
+						</tr></thead>
+						<tbody>
+						<?php foreach ( $server_info as $metric => $val ) : ?>
+						<tr>
+							<td><strong><?php echo esc_html( $metric ); ?></strong></td>
+							<td><?php echo esc_html( $val ); ?></td>
+						</tr>
+						<?php endforeach; ?>
+						</tbody>
+					</table>
+				</div>
+			</div>
 		</div>
 		<?php
 	}

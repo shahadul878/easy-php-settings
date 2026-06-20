@@ -96,7 +96,7 @@ jQuery(document).ready(function($) {
         }
         $('#user-ini-content').val(userIniContent);
         $('#htaccess-content').val(htaccessContent);
-        $('#config-output').show();
+        $('#config-output').addClass('is-visible').show();
     });
 
     // Copy to clipboard (legacy / config generator)
@@ -153,8 +153,26 @@ jQuery(document).ready(function($) {
 
     function showCopyFeedback($btn) {
         if (!$btn || !$btn.length) return;
+        var copiedText = easy_php_settingsAdminVars.copiedText || 'Copied!';
+        $btn.prop('disabled', true);
+        if ($btn.hasClass('easy-php-utility-btn')) {
+            var nodes = $btn.contents().filter(function() {
+                return this.nodeType === 3 && $.trim(this.nodeValue);
+            });
+            var orig = nodes.length ? $.trim(nodes.last()[0].nodeValue) : $btn.text();
+            $btn.data('easy-php-copy-label', orig);
+            nodes.last()[0].nodeValue = ' ' + copiedText;
+            setTimeout(function() {
+                var saved = $btn.data('easy-php-copy-label');
+                if (saved && nodes.length) {
+                    nodes.last()[0].nodeValue = ' ' + saved;
+                }
+                $btn.prop('disabled', false);
+            }, 1500);
+            return;
+        }
         var orig = $btn.text();
-        $btn.text(easy_php_settingsAdminVars.copiedText || 'Copied!').prop('disabled', true);
+        $btn.text(copiedText);
         setTimeout(function() {
             $btn.text(orig).prop('disabled', false);
         }, 1500);
@@ -162,45 +180,117 @@ jQuery(document).ready(function($) {
 
     // Test Settings
     $('#test-settings').on('click', function() {
+        var $btn = $(this);
         var results = $('#test-results');
-        results.html('<p>Testing settings...</p>');
+        $btn.prop('disabled', true).addClass('easy-php-settings-btn-loading');
+        results.removeAttr('hidden').html(
+            '<div class="easy-php-test-result easy-php-test-result--loading">' +
+                '<span class="easy-php-settings-btn-spinner" aria-hidden="true"></span>' +
+                '<span>Testing settings…</span>' +
+            '</div>'
+        );
         setTimeout(function() {
-            results.html('<p style="color: green;">✓ ' + easy_php_settingsAdminVars.testCompleted + '</p>');
+            $btn.prop('disabled', false).removeClass('easy-php-settings-btn-loading');
+            results.html(
+                '<div class="easy-php-test-result easy-php-test-result--success">' +
+                    '<span class="dashicons dashicons-yes-alt" aria-hidden="true"></span>' +
+                    '<span>' + easy_php_settingsAdminVars.testCompleted + '</span>' +
+                '</div>'
+            );
         }, 1000);
     });
 
     // PHP Settings Search and Copy functionality
     (function(){
-        // Search filter
         var searchInput = document.getElementById('php-settings-search');
         var table = document.getElementById('phpinfo-table');
+        var visibleCount = document.getElementById('php-settings-visible-count');
+        var emptyState = document.getElementById('php-settings-empty-state');
+        var selectAll = document.getElementById('php-settings-select-all');
+
+        function getBodyRows() {
+            if (!table) {
+                return [];
+            }
+            return Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+        }
+
+        function updateVisibleCount() {
+            var rows = getBodyRows();
+            var visible = 0;
+
+            rows.forEach(function(row) {
+                if (row.style.display !== 'none') {
+                    visible += 1;
+                }
+            });
+
+            if (visibleCount) {
+                visibleCount.textContent = visible + ' / ' + rows.length + ' shown';
+            }
+
+            if (emptyState) {
+                emptyState.hidden = visible > 0;
+            }
+
+            if (selectAll) {
+                var checkedVisible = rows.filter(function(row) {
+                    return row.style.display !== 'none' && row.querySelector('input[type="checkbox"]:checked');
+                }).length;
+                selectAll.checked = visible > 0 && checkedVisible === visible;
+                selectAll.indeterminate = checkedVisible > 0 && checkedVisible < visible;
+            }
+        }
+
         if (searchInput && table) {
             searchInput.addEventListener('input', function() {
-                var filter = this.value.toLowerCase();
-                var rows = table.getElementsByTagName('tr');
-                for (var i = 1; i < rows.length; i++) { // skip header
-                    var cells = rows[i].getElementsByTagName('td');
-                    var match = false;
-                    for (var j = 0; j < cells.length; j++) {
-                        if (cells[j].textContent.toLowerCase().indexOf(filter) > -1) {
-                            match = true;
-                            break;
-                        }
+                var filter = this.value.toLowerCase().trim();
+                var rows = getBodyRows();
+
+                rows.forEach(function(row) {
+                    var text = row.textContent.toLowerCase();
+                    row.style.display = !filter || text.indexOf(filter) > -1 ? '' : 'none';
+                });
+
+                updateVisibleCount();
+            });
+
+            updateVisibleCount();
+        }
+
+        if (selectAll && table) {
+            selectAll.addEventListener('change', function() {
+                getBodyRows().forEach(function(row) {
+                    if (row.style.display === 'none') {
+                        return;
                     }
-                    rows[i].style.display = match ? '' : 'none';
+                    var checkbox = row.querySelector('input[type="checkbox"]');
+                    if (checkbox) {
+                        checkbox.checked = selectAll.checked;
+                    }
+                });
+                updateVisibleCount();
+            });
+
+            table.addEventListener('change', function(event) {
+                if (event.target && event.target.matches('tbody input[type="checkbox"]')) {
+                    updateVisibleCount();
                 }
             });
         }
-        // Copy selected
+
         var copyBtn = document.getElementById('php-settings-copy-selected');
         if (copyBtn && table) {
             copyBtn.addEventListener('click', function() {
                 var rows = table.querySelectorAll('tbody tr');
                 var output = '';
                 rows.forEach(function(row) {
+                    if (row.style.display === 'none') {
+                        return;
+                    }
                     var checkbox = row.querySelector('input[type="checkbox"]');
                     if (checkbox && checkbox.checked) {
-                        var key = row.querySelector('.value')?.closest('td')?.previousElementSibling?.textContent?.trim() || '';
+                        var key = row.querySelector('.easy-php-directive-name')?.textContent?.trim() || '';
                         var value = row.querySelector('.value')?.textContent?.trim() || '';
                         if (key && value) {
                             output += key + ' = ' + value + '\n';
@@ -426,19 +516,45 @@ jQuery(document).ready(function($) {
 
     // Improve form submission feedback with loading states
     $('form').on('submit', function() {
-        var submitButton = $(this).find('input[type="submit"], button[type="submit"]');
+        var submitButton = $(this).find('input[type="submit"], button[type="submit"]').first();
         if (submitButton.length && !submitButton.hasClass('no-loading')) {
-            submitButton.prop('disabled', true);
-            var originalText = submitButton.val() || submitButton.text();
-            if (submitButton.is('button')) {
-                submitButton.html('<span class="dashicons dashicons-update-alt" style="animation: rotation 1s infinite linear; display: inline-block;"></span> ' + originalText);
+            submitButton.prop('disabled', true).addClass('easy-php-settings-btn-loading');
+            if (submitButton.hasClass('easy-php-save-button')) {
+                var $label = submitButton.find('.easy-php-save-button__label');
+                var originalText = $label.length ? $label.text() : submitButton.text();
+                submitButton.data('easy-php-original-text', originalText);
+                if (!submitButton.find('.easy-php-settings-btn-spinner').length) {
+                    submitButton.prepend('<span class="easy-php-settings-btn-spinner" aria-hidden="true"></span>');
+                }
+                if ($label.length) {
+                    $label.text('Saving...');
+                }
+            } else if (submitButton.is('button')) {
+                var originalText = submitButton.text();
+                submitButton.data('easy-php-original-text', originalText);
+                submitButton.html(
+                    '<span class="easy-php-settings-btn-spinner" aria-hidden="true"></span>' +
+                    '<span class="easy-php-settings-btn-label">' + originalText + '</span>'
+                );
             } else {
+                submitButton.data('easy-php-original-text', submitButton.val());
                 submitButton.val('Processing...');
             }
-            
-            // Add loading overlay
+
             if (!$('.easy-php-settings-loading-overlay').length) {
-                $('body').append('<div class="easy-php-settings-loading-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999999; display: flex; align-items: center; justify-content: center;"><div style="background: white; padding: 20px; border-radius: 4px;"><span class="dashicons dashicons-update-alt" style="animation: rotation 1s infinite linear; display: inline-block; font-size: 32px;"></span><p>Saving settings...</p></div></div>');
+                $('body').append(
+                    '<div class="easy-php-settings-loading-overlay" role="alertdialog" aria-modal="true" aria-labelledby="easy-php-settings-loading-title" aria-describedby="easy-php-settings-loading-desc">' +
+                        '<div class="easy-php-settings-loading-card">' +
+                            '<div class="easy-php-settings-spinner" aria-hidden="true">' +
+                                '<span class="easy-php-settings-spinner-ring"></span>' +
+                                '<span class="easy-php-settings-spinner-core"></span>' +
+                            '</div>' +
+                            '<p id="easy-php-settings-loading-title" class="easy-php-settings-loading-title">Saving settings&hellip;</p>' +
+                            '<p id="easy-php-settings-loading-desc" class="easy-php-settings-loading-desc">Updating your PHP and WordPress configuration.</p>' +
+                            '<div class="easy-php-settings-loading-progress" aria-hidden="true"><span></span></div>' +
+                        '</div>' +
+                    '</div>'
+                );
             }
         }
     });

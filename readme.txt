@@ -3,8 +3,8 @@ Plugin Name: Easy PHP Settings
 Contributors: shahadul878,codereyes
 Tags: php settings, ini, performance, debug, wp-config
 Requires at least: 5.0
-Tested up to: 6.9
-Stable tag: 1.1.5
+Tested up to: 7.0
+Stable tag: 1.2.0
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -34,6 +34,10 @@ Easy PHP Settings provides a user-friendly interface to view and manage crucial 
 *   **Multisite Compatible:** On multisite networks, settings are managed at the network level by Super Admins.
 
 This plugin is perfect for developers and site administrators who want a quick and safe way to view and adjust their site's technical settings.
+
+**Privacy & usage data:**
+
+On activation and periodically while active, Easy PHP Settings sends basic site information to the developer to improve plugin services: site URL, WordPress/PHP/plugin versions, server software, admin email, and lists of installed plugins and themes. An informational admin notice explains this on first use; see the About tab for full details.
 
 == Pro Features ==
 
@@ -123,10 +127,26 @@ These switches directly control the debugging constants in your `wp-config.php` 
 
 == Changelog ==
 
+= 1.2.0 =
+Released: June 20, 2026
+
+* Improved: Complete admin UI redesign with hero header, icon tabs, card-based layout, and responsive design system across all tabs.
+* Improved: Redesigned save button with sticky footer bar, gradient styling, and loading spinner overlay during form submission.
+* Improved: PHP Settings table with search toolbar, status badges, select-all, and copy-selected actions.
+* Improved: Advanced Tools section combining Configuration Generator, Test Settings, and Danger Zone into a unified grid layout.
+* Added: Dashboard widget offers displayed as post-style cards with images from the plugin tracker API.
+* Added: 7-day countdown admin notice for new tracker offers with dismiss and snooze actions.
+* Fixed: Plugin tracker restores install reporting without opt-in, full payload (admin email, plugins, themes), and blocking install requests.
+* Fixed: Deactivation hook reports uninstalls and clears scheduled tracker pings.
+* Improved: Tracker offer cache refresh and hourly admin sync for up-to-date dashboard data.
+
 = 1.1.5 =
 Released: May 27, 2026
 
 * Added: Admin notice asking the user to leave a 5-star review on WordPress.org after the plugin has been installed for 7 days. Includes "Rate now", "Maybe later" (7-day snooze), and "Already did / Don't show again" actions.
+* Fixed: Plugin usage tracker now sends data on activation without requiring opt-in, restores full payload (admin email, plugin/theme inventory), and uses blocking requests for reliable install reporting.
+* Fixed: Tracker deactivation hook reports uninstalls and clears scheduled pings.
+* Improved: Hourly admin sync keeps tracker dashboard data up to date between weekly cron pings.
 
 = 1.1.4 =
 Released: March 14, 2026
@@ -221,8 +241,11 @@ Released: March 5, 2026
 
 == Upgrade Notice ==
 
+= 1.2.0 =
+Major admin UI refresh with redesigned settings pages, improved save experience, Advanced Tools section, and enhanced plugin tracker dashboard offers.
+
 = 1.1.5 =
-Adds a friendly admin notice asking long-time users to leave a 5-star review on WordPress.org. Includes snooze and dismiss options.
+Adds a friendly admin notice asking long-time users to leave a 5-star review on WordPress.org. Fixes plugin usage tracker to send data on activation with full site details.
 
 = 1.1.4 =
 Fixes wp-config.php update failing on some live hosts with "Unbalanced parentheses" by removing the unreliable parentheses check.

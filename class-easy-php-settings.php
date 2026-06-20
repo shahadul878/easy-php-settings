@@ -3,7 +3,7 @@
  * Plugin Name: Easy PHP Settings
  * Plugin URI:  https://github.com/easy-php-settings
  * Description: An easy way to manage common PHP INI settings from the WordPress admin panel.
- * Version:     1.1.5
+ * Version:     1.2.0
  * Author:      H M Shahadul Islam
  * Author URI:  https://github.com/shahadul878
  * License:     GPL-2.0+
@@ -38,8 +38,6 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/plugin-tracker-integration.
 
 register_activation_hook( __FILE__, function () {
 	if ( function_exists( 'tracker_integration_report_install' ) ) {
-		// Records the plugin file but does NOT phone home. The first
-		// network call only happens after explicit consent.
 		tracker_integration_report_install( __FILE__ );
 	}
 	// Best-effort: migrate any legacy DB-stored wp-config backups to the
@@ -59,6 +57,13 @@ register_activation_hook( __FILE__, function () {
 		} else {
 			update_option( $install_key, time() );
 		}
+	}
+} );
+
+register_deactivation_hook( __FILE__, function () {
+	if ( function_exists( 'tracker_integration_report_deactivate' ) ) {
+		tracker_integration_report_deactivate( __FILE__ );
+		tracker_integration_unschedule_cron( __FILE__ );
 	}
 } );
 
@@ -111,7 +116,7 @@ class Easy_PHP_Settings {
 	/**
 	 * @var string
 	 */
-	private $version = '1.1.5';
+	private $version = '1.2.0';
 
 	/**
 	 * @var array
@@ -379,20 +384,42 @@ class Easy_PHP_Settings {
 		if ( ! isset( $ordered_tabs[ $active_tab ] ) ) {
 			$active_tab = 'general_settings';
 		}
+		$version = $this->get_version();
+		$tab_icons = array(
+			'general_settings' => 'dashicons-admin-settings',
+			'tools'            => 'dashicons-admin-tools',
+			'php_settings'     => 'dashicons-editor-code',
+			'extensions'       => 'dashicons-admin-plugins',
+			'status'           => 'dashicons-chart-bar',
+			'about'            => 'dashicons-admin-users',
+		);
 		?>
-		<div class="wrap">
-			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+		<div class="wrap easy-php-settings-app">
+			<div class="easy-php-settings-hero">
+				<div class="easy-php-settings-hero__brand">
+					<span class="easy-php-settings-hero__icon dashicons dashicons-performance" aria-hidden="true"></span>
+					<div>
+						<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+						<p><?php esc_html_e( 'Manage PHP limits, WordPress memory, debugging, extensions, and server configuration from one place.', 'easy-php-settings' ); ?></p>
+					</div>
+				</div>
+				<span class="easy-php-settings-version">v<?php echo esc_html( $version ); ?></span>
+			</div>
+
 			<?php settings_errors(); ?>
 
-			<h2 class="nav-tab-wrapper">
+			<nav class="easy-php-settings-tabs nav-tab-wrapper" aria-label="<?php esc_attr_e( 'Easy PHP Settings sections', 'easy-php-settings' ); ?>">
 				<?php foreach ( $ordered_tabs as $id => $cfg ) : ?>
+					<?php $icon = isset( $tab_icons[ $id ] ) ? $tab_icons[ $id ] : 'dashicons-admin-generic'; ?>
 					<a href="<?php echo esc_url( add_query_arg( array( 'page' => 'easy-php-settings', 'tab' => $id ), admin_url( 'tools.php' ) ) ); ?>"
 					   class="nav-tab <?php echo $id === $active_tab ? 'nav-tab-active' : ''; ?>">
+						<span class="dashicons <?php echo esc_attr( $icon ); ?>" aria-hidden="true"></span>
 						<?php echo esc_html( $cfg['title'] ); ?>
 					</a>
 				<?php endforeach; ?>
-			</h2>
+			</nav>
 
+			<div class="easy-php-settings-panel">
 			<?php
 			if ( isset( $ordered_tabs[ $active_tab ] ) && is_callable( $ordered_tabs[ $active_tab ]['callback'] ) ) {
 				call_user_func( $ordered_tabs[ $active_tab ]['callback'] );
@@ -400,6 +427,7 @@ class Easy_PHP_Settings {
 				echo '<p>' . esc_html__( 'Tab not found.', 'easy-php-settings' ) . '</p>';
 			}
 			?>
+			</div>
 		</div>
 		<?php
 	}

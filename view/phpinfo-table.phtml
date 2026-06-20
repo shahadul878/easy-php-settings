@@ -1,28 +1,42 @@
-<table id="phpinfo-table" class="widefat striped">
-    <thead>
-        <tr>
-            <th></th>
-            <th>Directive</th>
-            <th>Value</th>
-            <th>Status</th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php $i=0; foreach ($phpinfo_section as $key => $val): ?>
-            <tr <?php echo (is_array($val) ? 'class="local-override"' : '') ?>>
-                <td><input type="checkbox" value="<?php echo $i ?>"/></td>
-                <td><?php echo htmlspecialchars($key) ?></td>
-                <td>
-                    <span class="value"><?php echo is_array($val) ? htmlspecialchars($val[0]) : htmlspecialchars($val); ?></span>
-                </td>
-                <td>
-                    <?php if (is_array($val)): ?>
-                        <span class="highlight">Locally Overridden</span>
-                    <?php else: ?>
-                        <span>Default</span>
-                    <?php endif; ?>
-                </td>
-            </tr>
-        <?php $i++; endforeach; ?>
-    </tbody>
-</table> 
+<table id="phpinfo-table" class="easy-php-phpinfo-table">
+	<thead>
+		<tr>
+			<th class="easy-php-phpinfo-col-select" scope="col">
+				<input type="checkbox" id="php-settings-select-all" aria-label="<?php esc_attr_e( 'Select all visible directives', 'easy-php-settings' ); ?>" />
+			</th>
+			<th scope="col"><?php esc_html_e( 'Directive', 'easy-php-settings' ); ?></th>
+			<th scope="col"><?php esc_html_e( 'Value', 'easy-php-settings' ); ?></th>
+			<th scope="col"><?php esc_html_e( 'Status', 'easy-php-settings' ); ?></th>
+		</tr>
+	</thead>
+	<tbody>
+		<?php
+		$i = 0;
+		foreach ( $phpinfo_section as $key => $val ) :
+			$is_override = is_array( $val );
+			$value       = $is_override ? $val[0] : $val;
+			?>
+			<tr class="<?php echo $is_override ? 'easy-php-phpinfo-row--override' : 'easy-php-phpinfo-row--default'; ?>">
+				<td class="easy-php-phpinfo-col-select">
+					<input type="checkbox" value="<?php echo esc_attr( (string) $i ); ?>" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: PHP directive name */ __( 'Select %s', 'easy-php-settings' ), $key ) ); ?>" />
+				</td>
+				<td class="easy-php-phpinfo-col-directive" data-label="<?php esc_attr_e( 'Directive', 'easy-php-settings' ); ?>">
+					<code class="easy-php-directive-name"><?php echo esc_html( $key ); ?></code>
+				</td>
+				<td class="easy-php-phpinfo-col-value" data-label="<?php esc_attr_e( 'Value', 'easy-php-settings' ); ?>">
+					<code class="easy-php-directive-value"><span class="value"><?php echo esc_html( $value ); ?></span></code>
+				</td>
+				<td class="easy-php-phpinfo-col-status" data-label="<?php esc_attr_e( 'Status', 'easy-php-settings' ); ?>">
+					<?php if ( $is_override ) : ?>
+						<span class="easy-php-status-badge easy-php-status-badge--override"><?php esc_html_e( 'Locally Overridden', 'easy-php-settings' ); ?></span>
+					<?php else : ?>
+						<span class="easy-php-status-badge easy-php-status-badge--default"><?php esc_html_e( 'Default', 'easy-php-settings' ); ?></span>
+					<?php endif; ?>
+				</td>
+			</tr>
+			<?php
+			++$i;
+		endforeach;
+		?>
+	</tbody>
+</table>

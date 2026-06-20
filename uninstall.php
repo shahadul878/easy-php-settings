@@ -97,6 +97,8 @@ delete_option( $cron_option );
 delete_option( 'plugin_tracker_plugin_file' );
 delete_option( 'plugin_tracker_consent' );
 delete_option( 'plugin_tracker_consent_time' );
+delete_option( 'plugin_tracker_known_offer_ids' );
+delete_option( 'plugin_tracker_offer_notices' );
 
 // Best-effort: notify a denied state so the tracker can stop sending.
 $wpdb->delete( $wpdb->usermeta, array( 'meta_key' => 'plugin_tracker_notice_dismissed' ) );

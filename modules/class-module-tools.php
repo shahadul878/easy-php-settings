@@ -375,10 +375,9 @@ class Easy_Module_Tools extends Easy_Module_Base {
 	public function render_tab() {
 		?>
 		<div id="tools-tab">
-			<!-- Debugging Settings -->
-			<div class="easy-php-settings-config-box" style="margin-bottom:30px;">
-				<h3><span class="dashicons dashicons-admin-tools" style="color:#2271b1;"></span> <?php esc_html_e( 'WordPress Debugging Settings', 'easy-php-settings' ); ?></h3>
-				<p style="margin-bottom:12px;color:#646970;"><?php esc_html_e( 'Control WordPress debugging constants defined in wp-config.php.', 'easy-php-settings' ); ?></p>
+			<div class="easy-php-settings-config-box">
+				<h3><span class="dashicons dashicons-admin-tools"></span> <?php esc_html_e( 'WordPress Debugging Settings', 'easy-php-settings' ); ?></h3>
+				<p class="easy-php-card__desc"><?php esc_html_e( 'Control WordPress debugging constants defined in wp-config.php.', 'easy-php-settings' ); ?></p>
 				<form action="options.php" method="post">
 					<?php
 					settings_fields( 'easy_php_settings_debugging' );
@@ -386,45 +385,43 @@ class Easy_Module_Tools extends Easy_Module_Base {
 					?>
 					<div class="easy-php-settings-save-wrapper">
 						<div class="easy-php-settings-save-box">
-							<p class="submit" style="margin:0;padding:0;text-align:center;">
-								<input type="submit" name="submit" id="easy-php-settings-debug-save-button" class="button button-primary button-large" value="<?php echo esc_attr( __( 'Save Debugging Settings', 'easy-php-settings' ) ); ?>">
-							</p>
+							<button type="submit" name="submit" id="easy-php-settings-debug-save-button" class="easy-php-save-button button button-primary button-large">
+								<span class="easy-php-save-button__icon dashicons dashicons-saved" aria-hidden="true"></span>
+								<span class="easy-php-save-button__label"><?php esc_html_e( 'Save Debugging Settings', 'easy-php-settings' ); ?></span>
+							</button>
 						</div>
 					</div>
 				</form>
 			</div>
 
-			<!-- Log Viewer -->
-			<div class="easy-php-settings-config-box" style="margin-bottom:30px;">
-				<h3><span class="dashicons dashicons-visibility" style="color:#2271b1;"></span> <?php esc_html_e( 'Debug Log Viewer', 'easy-php-settings' ); ?></h3>
+			<div class="easy-php-settings-config-box">
+				<h3><span class="dashicons dashicons-visibility"></span> <?php esc_html_e( 'Debug Log Viewer', 'easy-php-settings' ); ?></h3>
 				<?php $this->render_log_viewer(); ?>
 			</div>
 
-			<!-- Export / Import -->
-			<div class="easy-php-settings-config-box" style="margin-bottom:30px;">
-				<h3><span class="dashicons dashicons-download" style="color:#2271b1;"></span> <?php esc_html_e( 'Export / Import Configuration', 'easy-php-settings' ); ?></h3>
+			<div class="easy-php-settings-config-box">
+				<h3><span class="dashicons dashicons-download"></span> <?php esc_html_e( 'Export / Import Configuration', 'easy-php-settings' ); ?></h3>
 
-				<h4><?php esc_html_e( 'Export', 'easy-php-settings' ); ?></h4>
-				<p style="color:#646970;"><?php esc_html_e( 'Download your current settings as a JSON file.', 'easy-php-settings' ); ?></p>
+				<h4 class="easy-php-subsection-title"><?php esc_html_e( 'Export', 'easy-php-settings' ); ?></h4>
+				<p class="easy-php-card__desc"><?php esc_html_e( 'Download your current settings as a JSON file.', 'easy-php-settings' ); ?></p>
 				<form method="post">
 					<?php wp_nonce_field( 'easy_php_settings_export_nonce' ); ?>
-					<button type="submit" name="easy_php_settings_export" class="button button-primary"><span class="dashicons dashicons-download" style="vertical-align:middle;margin-top:3px;"></span> <?php esc_html_e( 'Export Settings', 'easy-php-settings' ); ?></button>
+					<button type="submit" name="easy_php_settings_export" class="button button-primary"><span class="dashicons dashicons-download" aria-hidden="true"></span> <?php esc_html_e( 'Export Settings', 'easy-php-settings' ); ?></button>
 				</form>
 
-				<h4 style="margin-top:20px;"><?php esc_html_e( 'Import', 'easy-php-settings' ); ?></h4>
-				<p style="color:#646970;"><?php esc_html_e( 'Import settings from a previously exported JSON file. Your current settings will be backed up first.', 'easy-php-settings' ); ?></p>
-				<form method="post" enctype="multipart/form-data" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+				<h4 class="easy-php-subsection-title"><?php esc_html_e( 'Import', 'easy-php-settings' ); ?></h4>
+				<p class="easy-php-card__desc"><?php esc_html_e( 'Import settings from a previously exported JSON file. Your current settings will be backed up first.', 'easy-php-settings' ); ?></p>
+				<form method="post" enctype="multipart/form-data" class="easy-php-inline-form">
 					<?php wp_nonce_field( 'easy_php_settings_import_nonce' ); ?>
-					<input type="file" name="import_file" accept=".json" required style="flex:1;min-width:250px;">
-					<button type="submit" name="easy_php_settings_import" class="button button-secondary" onclick="return confirm('<?php echo esc_js( __( 'This will overwrite your current settings. A backup will be created. Continue?', 'easy-php-settings' ) ); ?>');"><span class="dashicons dashicons-upload" style="vertical-align:middle;margin-top:3px;"></span> <?php esc_html_e( 'Import Settings', 'easy-php-settings' ); ?></button>
+					<input type="file" name="import_file" accept=".json" required>
+					<button type="submit" name="easy_php_settings_import" class="button button-secondary" onclick="return confirm('<?php echo esc_js( __( 'This will overwrite your current settings. A backup will be created. Continue?', 'easy-php-settings' ) ); ?>');"><span class="dashicons dashicons-upload" aria-hidden="true"></span> <?php esc_html_e( 'Import Settings', 'easy-php-settings' ); ?></button>
 				</form>
 			</div>
 
-			<!-- Reset -->
 			<div class="easy-php-settings-config-box easy-php-settings-warning-box">
-				<h3><span class="dashicons dashicons-update" style="color:#f0ad4e;"></span> <?php esc_html_e( 'Reset Configuration', 'easy-php-settings' ); ?></h3>
-				<p style="color:#646970;"><?php esc_html_e( 'Reset settings to recommended values or clear all customizations. A backup is created automatically.', 'easy-php-settings' ); ?></p>
-				<div style="display:flex;gap:10px;flex-wrap:wrap;">
+				<h3><span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Reset Configuration', 'easy-php-settings' ); ?></h3>
+				<p class="easy-php-card__desc"><?php esc_html_e( 'Reset settings to recommended values or clear all customizations. A backup is created automatically.', 'easy-php-settings' ); ?></p>
+				<div class="easy-php-toolbar-actions">
 					<form method="post">
 						<?php wp_nonce_field( 'easy_php_settings_reset_nonce' ); ?>
 						<button type="submit" name="easy_php_settings_reset_recommended" class="button button-secondary" onclick="return confirm('<?php echo esc_js( __( 'Reset all settings to recommended values?', 'easy-php-settings' ) ); ?>');"><?php esc_html_e( 'Reset to Recommended', 'easy-php-settings' ); ?></button>
@@ -498,13 +495,13 @@ class Easy_Module_Tools extends Easy_Module_Base {
 			'easy_php_settings_download_log_nonce'
 		);
 		?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'tools.php?page=easy-php-settings&tab=tools' ) ); ?>" style="margin-bottom:15px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+		<form method="post" action="<?php echo esc_url( admin_url( 'tools.php?page=easy-php-settings&tab=tools' ) ); ?>" class="easy-php-toolbar">
 			<?php wp_nonce_field( 'easy_php_settings_clear_log_nonce' ); ?>
 			<input type="hidden" name="easy_php_settings_clear_log" value="1">
 			<input type="submit" id="easy-php-settings-clear-log-button" class="button button-danger" value="<?php esc_attr_e( 'Clear Log File', 'easy-php-settings' ); ?>" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to permanently delete the debug log?', 'easy-php-settings' ) ); ?>');">
 			<?php if ( $total_size > 0 ) : ?>
 				<a href="<?php echo esc_url( $download_url ); ?>" class="button"><?php esc_html_e( 'Download full log', 'easy-php-settings' ); ?></a>
-				<span style="color:#646970;font-size:13px;">
+				<span class="easy-php-card__desc" style="margin:0 !important;">
 					<?php
 					if ( $truncated ) {
 						echo esc_html(
@@ -521,7 +518,7 @@ class Easy_Module_Tools extends Easy_Module_Base {
 				</span>
 			<?php endif; ?>
 		</form>
-		<textarea id="easy_php_settings-log-viewer" style="width:100%;height:500px;font-family:monospace;" readonly><?php echo esc_textarea( $log_content ); ?></textarea>
+		<textarea id="easy_php_settings-log-viewer" rows="18" readonly><?php echo esc_textarea( $log_content ); ?></textarea>
 		<?php
 	}
 }

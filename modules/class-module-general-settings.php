@@ -527,9 +527,9 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 			<?php settings_fields( 'easy_php_settings' ); ?>
 
 			<div class="easy-php-settings-preset-box">
-				<h3><span class="dashicons dashicons-admin-settings" style="color:#2271b1;"></span> <?php esc_html_e( 'Quick Configuration Presets', 'easy-php-settings' ); ?></h3>
-				<p style="margin-bottom:12px;color:#646970;"><?php esc_html_e( 'Select a pre-configured optimization profile to instantly apply recommended settings for your specific use case.', 'easy-php-settings' ); ?></p>
-				<label for="easy_php_settings_preset" style="font-weight:600;display:block;margin-bottom:8px;"><?php esc_html_e( 'Choose a Preset:', 'easy-php-settings' ); ?></label>
+				<h3><span class="dashicons dashicons-admin-settings"></span> <?php esc_html_e( 'Quick Configuration Presets', 'easy-php-settings' ); ?></h3>
+				<p class="easy-php-card__desc"><?php esc_html_e( 'Select a pre-configured optimization profile to instantly apply recommended settings for your specific use case.', 'easy-php-settings' ); ?></p>
+				<label for="easy_php_settings_preset" class="easy-php-field-label"><?php esc_html_e( 'Choose a Preset:', 'easy-php-settings' ); ?></label>
 				<select id="easy_php_settings_preset">
 					<option value=""><?php esc_html_e( '-- Select a Preset Configuration --', 'easy-php-settings' ); ?></option>
 					<?php foreach ( $presets as $pk => $pd ) : ?>
@@ -539,18 +539,18 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 			</div>
 
 			<div class="easy-php-settings-config-box">
-				<h3><span class="dashicons dashicons-editor-code" style="color:#2271b1;"></span> <?php esc_html_e( 'Custom PHP Configuration', 'easy-php-settings' ); ?></h3>
-				<p style="margin-bottom:12px;color:#646970;"><?php esc_html_e( 'Add any additional PHP directives here. These will be included in the generated .user.ini and php.ini files.', 'easy-php-settings' ); ?></p>
-				<textarea name="easy_php_settings_settings[custom_php_ini]" id="easy_php_settings_custom_php_ini" rows="10" style="width:100%;" placeholder="<?php esc_attr_e( '; Add custom PHP directives here', 'easy-php-settings' ); ?>"><?php echo isset( $options['custom_php_ini'] ) ? esc_textarea( $options['custom_php_ini'] ) : ''; ?></textarea>
+				<h3><span class="dashicons dashicons-editor-code"></span> <?php esc_html_e( 'Custom PHP Configuration', 'easy-php-settings' ); ?></h3>
+				<p class="easy-php-card__desc"><?php esc_html_e( 'Add any additional PHP directives here. These will be included in the generated .user.ini and php.ini files.', 'easy-php-settings' ); ?></p>
+				<textarea name="easy_php_settings_settings[custom_php_ini]" id="easy_php_settings_custom_php_ini" rows="10" placeholder="<?php esc_attr_e( '; Add custom PHP directives here', 'easy-php-settings' ); ?>"><?php echo isset( $options['custom_php_ini'] ) ? esc_textarea( $options['custom_php_ini'] ) : ''; ?></textarea>
 			</div>
 
 			<div class="easy-php-settings-config-box">
-				<h3><span class="dashicons dashicons-performance" style="color:#2271b1;"></span> <?php esc_html_e( 'Core PHP Settings', 'easy-php-settings' ); ?></h3>
+				<h3><span class="dashicons dashicons-performance"></span> <?php esc_html_e( 'Core PHP Settings', 'easy-php-settings' ); ?></h3>
 				<?php do_settings_sections( 'easy_php_settings' ); ?>
 			</div>
 
 			<div class="easy-php-settings-config-box">
-				<h3><span class="dashicons dashicons-wordpress" style="color:#2271b1;"></span> <?php esc_html_e( 'WordPress Memory Configuration', 'easy-php-settings' ); ?></h3>
+				<h3><span class="dashicons dashicons-wordpress"></span> <?php esc_html_e( 'WordPress Memory Configuration', 'easy-php-settings' ); ?></h3>
 				<table class="form-table">
 					<tr>
 						<th scope="row"><label for="wp_memory_limit"><?php esc_html_e( 'WP_MEMORY_LIMIT', 'easy-php-settings' ); ?></label></th>
@@ -564,47 +564,103 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 			</div>
 
 			<div class="easy-php-settings-actions">
-				<p class="submit">
-					<input type="submit" name="submit" id="easy-php-settings-save-button" class="button button-primary button-large" value="<?php echo esc_attr( __( 'Save All Settings', 'easy-php-settings' ) ); ?>" />
-				</p>
+				<div class="easy-php-settings-actions__inner">
+					<p class="easy-php-settings-actions__hint">
+						<span class="dashicons dashicons-info-outline" aria-hidden="true"></span>
+						<?php esc_html_e( 'Saves PHP limits, custom directives, and WordPress memory settings to your configuration files.', 'easy-php-settings' ); ?>
+					</p>
+					<button type="submit" name="submit" id="easy-php-settings-save-button" class="easy-php-save-button button button-primary button-large">
+						<span class="easy-php-save-button__icon dashicons dashicons-saved" aria-hidden="true"></span>
+						<span class="easy-php-save-button__label"><?php esc_html_e( 'Save All Settings', 'easy-php-settings' ); ?></span>
+					</button>
+				</div>
 			</div>
 		</form>
 
-		<div class="easy-php-settings-danger-zone">
-			<h3 class="easy-php-danger-title"><?php esc_html_e( 'Danger Zone', 'easy-php-settings' ); ?></h3>
-			<p class="description"><?php esc_html_e( 'Remove configuration files created by this plugin. Use only if you want to revert to server defaults.', 'easy-php-settings' ); ?></p>
-			<form action="" method="post" class="easy-php-delete-form">
-				<?php wp_nonce_field( 'easy_php_settings_delete_ini_nonce' ); ?>
-				<button type="submit" name="easy_php_settings_delete_ini_files" class="button button-secondary easy-php-delete-files-btn" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to delete the .user.ini and php.ini files created by this plugin?', 'easy-php-settings' ) ); ?>');">
-					<?php esc_html_e( 'Delete .ini Files', 'easy-php-settings' ); ?>
-				</button>
-			</form>
-		</div>
+		<div class="easy-php-utility-section">
+			<div class="easy-php-utility-section__header">
+				<h2><?php esc_html_e( 'Advanced Tools', 'easy-php-settings' ); ?></h2>
+				<p><?php esc_html_e( 'Generate configs, validate runtime changes, or remove plugin-created files when needed.', 'easy-php-settings' ); ?></p>
+			</div>
 
-		<div class="easy-php-config-generator-box">
-			<h3><?php esc_html_e( 'Configuration Generator', 'easy-php-settings' ); ?></h3>
-			<p><?php esc_html_e( 'Generate server configuration files with your custom values.', 'easy-php-settings' ); ?></p>
-			<button type="button" id="generate-config" class="button button-primary"><?php esc_html_e( 'Generate Configuration Files', 'easy-php-settings' ); ?></button>
-			<div id="config-output" class="easy-php-config-output">
-				<h4><?php esc_html_e( 'Generated Configuration', 'easy-php-settings' ); ?></h4>
-				<div class="easy-php-config-block">
-					<label><?php esc_html_e( '.user.ini', 'easy-php-settings' ); ?></label>
-					<textarea id="user-ini-content" readonly></textarea>
-					<button type="button" class="button button-secondary easy-php-copy-config" data-target="user-ini-content"><?php esc_html_e( 'Copy to Clipboard', 'easy-php-settings' ); ?></button>
+			<div class="easy-php-utility-grid">
+				<div class="easy-php-utility-card easy-php-utility-card--generator">
+					<div class="easy-php-utility-card__head">
+						<span class="easy-php-utility-card__icon easy-php-utility-card__icon--blue" aria-hidden="true">
+							<span class="dashicons dashicons-media-code"></span>
+						</span>
+						<div class="easy-php-utility-card__copy">
+							<h3><?php esc_html_e( 'Configuration Generator', 'easy-php-settings' ); ?></h3>
+							<p><?php esc_html_e( 'Preview .user.ini and .htaccess snippets from your current form values before saving.', 'easy-php-settings' ); ?></p>
+						</div>
+					</div>
+					<div class="easy-php-utility-card__actions">
+						<button type="button" id="generate-config" class="easy-php-utility-btn easy-php-utility-btn--primary">
+							<span class="dashicons dashicons-admin-generic" aria-hidden="true"></span>
+							<?php esc_html_e( 'Generate Configuration Files', 'easy-php-settings' ); ?>
+						</button>
+					</div>
+					<div id="config-output" class="easy-php-config-output easy-php-utility-card__body">
+						<h4><?php esc_html_e( 'Generated Configuration', 'easy-php-settings' ); ?></h4>
+						<div class="easy-php-config-block">
+							<label><?php esc_html_e( '.user.ini', 'easy-php-settings' ); ?></label>
+							<textarea id="user-ini-content" readonly></textarea>
+							<button type="button" class="easy-php-utility-btn easy-php-utility-btn--ghost easy-php-copy-config" data-target="user-ini-content">
+								<span class="dashicons dashicons-admin-page" aria-hidden="true"></span>
+								<?php esc_html_e( 'Copy to Clipboard', 'easy-php-settings' ); ?>
+							</button>
+						</div>
+						<div class="easy-php-config-block" id="htaccess-block">
+							<label><?php esc_html_e( '.htaccess (Apache)', 'easy-php-settings' ); ?></label>
+							<textarea id="htaccess-content" readonly></textarea>
+							<button type="button" class="easy-php-utility-btn easy-php-utility-btn--ghost easy-php-copy-config" data-target="htaccess-content">
+								<span class="dashicons dashicons-admin-page" aria-hidden="true"></span>
+								<?php esc_html_e( 'Copy to Clipboard', 'easy-php-settings' ); ?>
+							</button>
+						</div>
+					</div>
 				</div>
-				<div class="easy-php-config-block" id="htaccess-block">
-					<label><?php esc_html_e( '.htaccess (Apache)', 'easy-php-settings' ); ?></label>
-					<textarea id="htaccess-content" readonly></textarea>
-					<button type="button" class="button button-secondary easy-php-copy-config" data-target="htaccess-content"><?php esc_html_e( 'Copy to Clipboard', 'easy-php-settings' ); ?></button>
+
+				<div class="easy-php-utility-card easy-php-utility-card--test">
+					<div class="easy-php-utility-card__head">
+						<span class="easy-php-utility-card__icon easy-php-utility-card__icon--green" aria-hidden="true">
+							<span class="dashicons dashicons-yes-alt"></span>
+						</span>
+						<div class="easy-php-utility-card__copy">
+							<h3><?php esc_html_e( 'Test Settings', 'easy-php-settings' ); ?></h3>
+							<p><?php esc_html_e( 'Check whether your PHP limits can be changed at runtime on this server.', 'easy-php-settings' ); ?></p>
+						</div>
+					</div>
+					<div class="easy-php-utility-card__actions">
+						<button type="button" id="test-settings" class="easy-php-utility-btn easy-php-utility-btn--secondary">
+							<span class="dashicons dashicons-controls-play" aria-hidden="true"></span>
+							<?php esc_html_e( 'Run Settings Test', 'easy-php-settings' ); ?>
+						</button>
+					</div>
+					<div id="test-results" class="easy-php-test-results easy-php-utility-card__body" hidden></div>
 				</div>
 			</div>
-		</div>
 
-		<div class="easy-php-test-settings-box">
-			<h3><?php esc_html_e( 'Test Settings', 'easy-php-settings' ); ?></h3>
-			<p><?php esc_html_e( 'Test if your current settings can be modified at runtime.', 'easy-php-settings' ); ?></p>
-			<button type="button" id="test-settings" class="button button-secondary"><?php esc_html_e( 'Test Settings', 'easy-php-settings' ); ?></button>
-			<div id="test-results" class="easy-php-test-results"></div>
+			<div class="easy-php-utility-card easy-php-utility-card--danger">
+				<div class="easy-php-utility-card__head">
+					<span class="easy-php-utility-card__icon easy-php-utility-card__icon--red" aria-hidden="true">
+						<span class="dashicons dashicons-warning"></span>
+					</span>
+					<div class="easy-php-utility-card__copy">
+						<h3><?php esc_html_e( 'Danger Zone', 'easy-php-settings' ); ?></h3>
+						<p><?php esc_html_e( 'Remove .user.ini and php.ini files created by this plugin to revert to server defaults.', 'easy-php-settings' ); ?></p>
+					</div>
+				</div>
+				<div class="easy-php-utility-card__actions">
+					<form action="" method="post" class="easy-php-delete-form">
+						<?php wp_nonce_field( 'easy_php_settings_delete_ini_nonce' ); ?>
+						<button type="submit" name="easy_php_settings_delete_ini_files" class="easy-php-utility-btn easy-php-utility-btn--danger no-loading" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to delete the .user.ini and php.ini files created by this plugin?', 'easy-php-settings' ) ); ?>');">
+							<span class="dashicons dashicons-trash" aria-hidden="true"></span>
+							<?php esc_html_e( 'Delete .ini Files', 'easy-php-settings' ); ?>
+						</button>
+					</form>
+				</div>
+			</div>
 		</div>
 		<?php
 	}

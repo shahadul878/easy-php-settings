@@ -58,14 +58,48 @@ class Easy_Module_PHP_Settings extends Easy_Module_Base {
 	 * @return void
 	 */
 	public function render_tab() {
+		$directive_count = 0;
+		if ( class_exists( 'EasyPHPInfo' ) ) {
+			$info = EasyPHPInfo::get_as_array();
+			if ( isset( $info['Core'] ) && is_array( $info['Core'] ) ) {
+				$directive_count = count( $info['Core'] );
+			}
+		}
 		?>
-		<div id="php-settings-tab">
-			<h3><?php esc_html_e( 'PHP Settings Table', 'easy-php-settings' ); ?></h3>
-			<div style="margin-bottom: 10px; display: flex; gap: 10px; align-items: center;">
-				<input type="text" id="php-settings-search" placeholder="<?php esc_attr_e( 'Search for directives...', 'easy-php-settings' ); ?>" style="min-width: 250px; padding: 5px;" />
-				<button type="button" class="button button-secondary" id="php-settings-copy-selected"><?php esc_html_e( 'Copy Selected', 'easy-php-settings' ); ?></button>
+		<div id="php-settings-tab" class="easy-php-php-settings-panel">
+			<div class="easy-php-php-settings-header">
+				<div class="easy-php-php-settings-header-text">
+					<h3><?php esc_html_e( 'PHP Settings Table', 'easy-php-settings' ); ?></h3>
+					<p class="description">
+						<?php esc_html_e( 'Browse every loaded PHP directive, filter quickly, and copy selected values to your clipboard.', 'easy-php-settings' ); ?>
+					</p>
+				</div>
+				<div class="easy-php-php-settings-stat" aria-live="polite">
+					<span class="easy-php-php-settings-stat-value" id="php-settings-total-count"><?php echo esc_html( (string) $directive_count ); ?></span>
+					<span class="easy-php-php-settings-stat-label"><?php esc_html_e( 'directives', 'easy-php-settings' ); ?></span>
+				</div>
 			</div>
-			<div id="php-settings-table-wrapper">
+
+			<div class="easy-php-php-settings-toolbar">
+				<label class="easy-php-php-settings-search-wrap" for="php-settings-search">
+					<span class="dashicons dashicons-search" aria-hidden="true"></span>
+					<input
+						type="search"
+						id="php-settings-search"
+						placeholder="<?php esc_attr_e( 'Search directives, values, or status…', 'easy-php-settings' ); ?>"
+						autocomplete="off"
+					/>
+				</label>
+				<div class="easy-php-php-settings-toolbar-actions">
+					<span class="easy-php-php-settings-result-count" id="php-settings-visible-count" aria-live="polite"></span>
+					<button type="button" class="button button-secondary" id="php-settings-copy-selected">
+						<span class="dashicons dashicons-admin-page" aria-hidden="true"></span>
+						<?php esc_html_e( 'Copy Selected', 'easy-php-settings' ); ?>
+					</button>
+				</div>
+			</div>
+
+			<div id="php-settings-table-wrapper" class="easy-php-php-settings-table-wrap">
 				<?php
 				if ( class_exists( 'EasyPHPInfo' ) ) {
 					echo EasyPHPInfo::render( 'Core' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -73,8 +107,16 @@ class Easy_Module_PHP_Settings extends Easy_Module_Base {
 					echo '<p>' . esc_html__( 'PHPInfo class not found.', 'easy-php-settings' ) . '</p>';
 				}
 				?>
+				<p class="easy-php-php-settings-empty" id="php-settings-empty-state" hidden>
+					<span class="dashicons dashicons-search" aria-hidden="true"></span>
+					<?php esc_html_e( 'No directives match your search.', 'easy-php-settings' ); ?>
+				</p>
 			</div>
-			<p style="margin-top: 10px; color: #666;"><em><?php esc_html_e( 'Tip: Use the search box to filter settings. Select rows and click "Copy Selected" to copy them to your clipboard.', 'easy-php-settings' ); ?></em></p>
+
+			<p class="easy-php-php-settings-tip">
+				<span class="dashicons dashicons-info-outline" aria-hidden="true"></span>
+				<?php esc_html_e( 'Tip: Select rows with the checkboxes, then click Copy Selected to copy directive = value pairs.', 'easy-php-settings' ); ?>
+			</p>
 		</div>
 		<?php
 	}
