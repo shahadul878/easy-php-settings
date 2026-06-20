@@ -243,6 +243,5 @@ jobs:
           draft: false
           prerelease: false
           make_latest: true
-          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
