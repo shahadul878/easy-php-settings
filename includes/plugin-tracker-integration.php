@@ -6,7 +6,7 @@
  * activation, weekly cron, and periodic admin sync.
  *
  * @package PluginTrackerIntegration
- * @version 1.0.6
+ * @version 1.1.6
  * @author H M Shahadul Islam
  * @license GPL-2.0+
  */
@@ -607,7 +607,7 @@ add_action(
 			'easy-php-settings-tracker-widget',
 			plugins_url( 'css/admin-styles.css', dirname( __DIR__ ) . '/class-easy-php-settings.php' ),
 			array(),
-			defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.0.6'
+			defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.6'
 		);
 	}
 );
@@ -812,7 +812,7 @@ function tracker_integration_enqueue_offer_notice_assets() {
 	}
 
 	$plugin_file = dirname( __DIR__ ) . '/class-easy-php-settings.php';
-	$version     = defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.0.6';
+	$version     = defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.6';
 	$offer       = $active['offer'];
 	$offer_id    = isset( $offer['id'] ) ? (string) $offer['id'] : '';
 	$offer_link  = tracker_integration_safe_offer_link( isset( $offer['link'] ) ? $offer['link'] : '' );
