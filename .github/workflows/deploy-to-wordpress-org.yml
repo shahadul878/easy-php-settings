@@ -200,20 +200,18 @@ jobs:
       - name: Create SVN tag
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
-          cd /tmp/svn
+          TAG_URL="https://plugins.svn.wordpress.org/easy-php-settings/tags/${VERSION}"
+          TRUNK_URL="https://plugins.svn.wordpress.org/easy-php-settings/trunk"
 
-          if [ -d "tags/${VERSION}" ]; then
-            svn rm "tags/${VERSION}"
-            svn commit -m "Remove existing tag ${VERSION}" \
+          if svn info "$TAG_URL" >/dev/null 2>&1; then
+            svn delete "$TAG_URL" -m "Remove existing tag ${VERSION} for redeploy" \
               --username ${{ secrets.WPORG_USERNAME }} \
               --password ${{ secrets.WPORG_PASSWORD }} \
               --no-auth-cache \
               --non-interactive
           fi
 
-          svn cp trunk "tags/${VERSION}"
-
-          svn commit -m "Tag version ${VERSION}" \
+          svn cp "$TRUNK_URL" "$TAG_URL" -m "Tag version ${VERSION}" \
             --username ${{ secrets.WPORG_USERNAME }} \
             --password ${{ secrets.WPORG_PASSWORD }} \
             --no-auth-cache \
