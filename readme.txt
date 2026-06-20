@@ -4,7 +4,7 @@ Contributors: shahadul878,codereyes
 Tags: php settings, ini, performance, debug, wp-config
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 1.2.0
+Stable tag: 1.0.6
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -127,7 +127,7 @@ These switches directly control the debugging constants in your `wp-config.php` 
 
 == Changelog ==
 
-= 1.2.0 =
+= 1.0.6 =
 Released: June 20, 2026
 
 * Improved: Complete admin UI redesign with hero header, icon tabs, card-based layout, and responsive design system across all tabs.
@@ -241,7 +241,7 @@ Released: March 5, 2026
 
 == Upgrade Notice ==
 
-= 1.2.0 =
+= 1.0.6 =
 Major admin UI refresh with redesigned settings pages, improved save experience, Advanced Tools section, and enhanced plugin tracker dashboard offers.
 
 = 1.1.5 =
