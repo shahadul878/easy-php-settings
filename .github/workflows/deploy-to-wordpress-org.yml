@@ -35,47 +35,39 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
-      - name: Generate changelog
+      - name: Extract changelog from readme.txt
         id: changelog
         run: |
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          VERSION="${{ steps.get_version.outputs.version }}"
+          CHANGELOG=$(awk -v ver="$VERSION" '
+            $0 ~ "^= " ver " =$" { found=1; next }
+            found && /^= [0-9]/ { exit }
+            found && /^\* / { print }
+          ' readme.txt)
 
-          if [ -z "$PREVIOUS_TAG" ]; then
-            CHANGELOG=$(git log --pretty=format:"* %s" --reverse)
-          else
-            CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"* %s" --reverse)
+          if [ -z "$CHANGELOG" ]; then
+            PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+            if [ -z "$PREVIOUS_TAG" ]; then
+              CHANGELOG=$(git log --pretty=format:"* %s" --reverse)
+            else
+              CHANGELOG=$(git log ${PREVIOUS_TAG}..HEAD --pretty=format:"* %s" --reverse)
+            fi
           fi
 
-          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "changelog<<EOF"
+            echo "$CHANGELOG"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Update readme.txt
+      - name: Update readme.txt stable tag
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
-          CHANGELOG="${{ steps.changelog.outputs.changelog }}"
-
           sed -i "s/Stable tag: .*/Stable tag: ${VERSION}/" readme.txt
 
-          DATE=$(date +"%B %d, %Y")
-
-          if grep -q "== Changelog ==" readme.txt; then
-            sed -i "/== Changelog ==/a\\
-            \\
-            = ${VERSION} =\\
-            Released: ${DATE}\\
-            \\
-            ${CHANGELOG}\\
-            " readme.txt
-          else
-            echo "" >> readme.txt
-            echo "== Changelog ==" >> readme.txt
-            echo "" >> readme.txt
-            echo "= ${VERSION} =" >> readme.txt
-            echo "Released: ${DATE}" >> readme.txt
-            echo "" >> readme.txt
-            echo "${CHANGELOG}" >> readme.txt
+          if ! grep -q "= ${VERSION} =" readme.txt; then
+            echo "Warning: No changelog entry for version ${VERSION} in readme.txt"
+            exit 1
           fi
 
       - name: Update plugin version
