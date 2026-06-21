@@ -56,5 +56,14 @@ Both workflows sync this folder to `https://plugins.svn.wordpress.org/easy-php-s
 ## Adding / Updating Assets
 
 1. Add or replace files in this directory.
-2. Push to `master` — the `deploy-assets.yml` workflow will automatically update WordPress.org.
-3. Alternatively, run the workflow manually from the GitHub Actions tab.
+2. Regenerate tab screenshots locally:
+
+```bash
+cd wp-content/plugins/easy-php-settings
+node scripts/capture-screenshots.mjs
+```
+
+Requires a running local site at `http://plugin-dev.local` and admin credentials via `WP_ADMIN_USER` / `WP_ADMIN_PASS` env vars.
+
+3. Push to `master` — the `deploy-assets.yml` workflow will automatically update WordPress.org.
+4. Alternatively, run the workflow manually from the GitHub Actions tab.
