@@ -2,11 +2,11 @@
 /**
  * Plugin Tracker Integration – drop-in for existing WordPress plugins.
  *
- * Reports basic site and plugin usage to the Plugin Tracker API on
- * activation, weekly cron, and periodic admin sync.
+ * Reports basic site and plugin usage to the Plugin Tracker API when the
+ * administrator has explicitly opted in. No data is sent by default.
  *
  * @package PluginTrackerIntegration
- * @version 1.1.6
+ * @version 1.1.7
  * @author H M Shahadul Islam
  * @license GPL-2.0+
  */
@@ -24,6 +24,8 @@ if ( ! defined( 'PLUGIN_TRACKER_API_KEY' ) ) {
 }
 
 const PLUGIN_TRACKER_PLUGIN_FILE_OPT = 'plugin_tracker_plugin_file';
+const PLUGIN_TRACKER_CONSENT_OPT     = 'plugin_tracker_consent';
+const PLUGIN_TRACKER_CONSENT_TIME_OPT = 'plugin_tracker_consent_time';
 const PLUGIN_TRACKER_KNOWN_OFFERS_OPT  = 'plugin_tracker_known_offer_ids';
 const PLUGIN_TRACKER_OFFER_NOTICES_OPT = 'plugin_tracker_offer_notices';
 const PLUGIN_TRACKER_OFFER_NOTICE_TTL  = 7 * DAY_IN_SECONDS;
@@ -142,13 +144,32 @@ function tracker_integration_build_payload( $plugin_file ) {
 }
 
 /**
- * Report install to Plugin Tracker API. Call from activation hook.
+ * Whether the site administrator has opted in to third-party data sharing.
+ *
+ * @return bool
+ */
+function tracker_integration_has_consent() {
+	return '1' === get_option( PLUGIN_TRACKER_CONSENT_OPT, '0' );
+}
+
+/**
+ * Register plugin on activation without sending any external data.
  *
  * @param string $plugin_file Path to the main plugin file.
  */
-function tracker_integration_report_install( $plugin_file ) {
+function tracker_integration_on_activate( $plugin_file ) {
 	$GLOBALS['plugin_tracker_integration_plugin_file'] = $plugin_file;
 	update_option( PLUGIN_TRACKER_PLUGIN_FILE_OPT, $plugin_file, false );
+}
+
+/**
+ * Opt in to data sharing: persist consent, send install report, schedule cron.
+ *
+ * @param string $plugin_file Path to the main plugin file.
+ */
+function tracker_integration_grant_consent( $plugin_file ) {
+	update_option( PLUGIN_TRACKER_CONSENT_OPT, '1', false );
+	update_option( PLUGIN_TRACKER_CONSENT_TIME_OPT, time(), false );
 
 	tracker_integration_delete_offers_cache();
 	tracker_integration_send_install( $plugin_file );
@@ -156,13 +177,88 @@ function tracker_integration_report_install( $plugin_file ) {
 }
 
 /**
+ * Revoke consent and stop all scheduled tracking.
+ *
+ * @param string $plugin_file     Path to the main plugin file.
+ * @param bool   $send_deactivate Send a best-effort deactivate ping when consent was active.
+ */
+function tracker_integration_revoke_consent( $plugin_file, $send_deactivate = true ) {
+	$had_consent = tracker_integration_has_consent();
+
+	if ( $send_deactivate && $had_consent && $plugin_file ) {
+		tracker_integration_post( 'deactivate', tracker_integration_build_payload( $plugin_file ), false, false );
+	}
+
+	update_option( PLUGIN_TRACKER_CONSENT_OPT, '0', false );
+	delete_option( PLUGIN_TRACKER_CONSENT_TIME_OPT );
+	tracker_integration_unschedule_cron( $plugin_file );
+	tracker_integration_delete_offers_cache();
+	delete_option( PLUGIN_TRACKER_KNOWN_OFFERS_OPT );
+	delete_option( PLUGIN_TRACKER_OFFER_NOTICES_OPT );
+}
+
+/**
+ * Handle plugin deactivation: notify tracker only if opted in, always clear cron.
+ *
+ * @param string $plugin_file Path to the main plugin file.
+ */
+function tracker_integration_on_deactivate( $plugin_file ) {
+	if ( tracker_integration_has_consent() ) {
+		tracker_integration_report_deactivate( $plugin_file );
+	}
+	tracker_integration_unschedule_cron( $plugin_file );
+}
+
+/**
+ * URL to the About tab consent panel.
+ *
+ * @return string
+ */
+function tracker_integration_get_consent_settings_url() {
+	return add_query_arg(
+		array(
+			'page' => 'easy-php-settings',
+			'tab'  => 'about',
+		),
+		admin_url( 'tools.php' )
+	);
+}
+
+/**
+ * Shared disclosure copy for opt-in UI.
+ *
+ * @return array<string, string>
+ */
+function tracker_integration_get_disclosure_fields() {
+	return array(
+		__( 'Site URL', 'easy-php-settings' ),
+		__( 'WordPress, PHP, and plugin versions', 'easy-php-settings' ),
+		__( 'Server software', 'easy-php-settings' ),
+		__( 'Administrator email address and display name', 'easy-php-settings' ),
+		__( 'Installed plugins and themes (name, version, active status)', 'easy-php-settings' ),
+	);
+}
+
+/**
+ * @deprecated 1.1.7 Use tracker_integration_on_activate() instead.
+ * @param string $plugin_file Path to the main plugin file.
+ */
+function tracker_integration_report_install( $plugin_file ) {
+	tracker_integration_on_activate( $plugin_file );
+}
+
+/**
  * POST a payload to the tracker.
  *
- * @param string $endpoint Path under PLUGIN_TRACKER_API_URL (e.g. 'install').
- * @param array  $payload  Body.
- * @param bool   $blocking Whether to wait for the HTTP response.
+ * @param string $endpoint         Path under PLUGIN_TRACKER_API_URL (e.g. 'install').
+ * @param array  $payload          Body.
+ * @param bool   $blocking         Whether to wait for the HTTP response.
+ * @param bool   $require_consent  When true, abort if the site has not opted in.
  */
-function tracker_integration_post( $endpoint, $payload, $blocking = false ) {
+function tracker_integration_post( $endpoint, $payload, $blocking = false, $require_consent = true ) {
+	if ( $require_consent && ! tracker_integration_has_consent() ) {
+		return;
+	}
 	if ( '' === PLUGIN_TRACKER_API_KEY ) {
 		return;
 	}
@@ -238,7 +334,10 @@ function tracker_integration_send_install( $plugin_file ) {
  * @param string $plugin_file Plugin file path.
  */
 function tracker_integration_report_deactivate( $plugin_file ) {
-	tracker_integration_post( 'deactivate', tracker_integration_build_payload( $plugin_file ), false );
+	if ( ! tracker_integration_has_consent() ) {
+		return;
+	}
+	tracker_integration_post( 'deactivate', tracker_integration_build_payload( $plugin_file ), false, false );
 }
 
 /**
@@ -265,19 +364,22 @@ function tracker_integration_cleanup( $plugin_file = null ) {
 	}
 
 	delete_option( PLUGIN_TRACKER_PLUGIN_FILE_OPT );
-	delete_option( 'plugin_tracker_consent' );
-	delete_option( 'plugin_tracker_consent_time' );
+	delete_option( PLUGIN_TRACKER_CONSENT_OPT );
+	delete_option( PLUGIN_TRACKER_CONSENT_TIME_OPT );
 	delete_option( PLUGIN_TRACKER_KNOWN_OFFERS_OPT );
 	delete_option( PLUGIN_TRACKER_OFFER_NOTICES_OPT );
 
 	$wpdb->query( "DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_plugin_tracker_%' OR option_name LIKE '_transient_timeout_plugin_tracker_%'" );
-	$wpdb->delete( $wpdb->usermeta, array( 'meta_key' => 'plugin_tracker_notice_dismissed' ) );
+	$wpdb->delete( $wpdb->usermeta, array( 'meta_key' => 'plugin_tracker_optin_dismissed' ) );
 }
 
 // Re-ping after our own plugin is updated so the tracker refreshes version info.
 add_action(
 	'upgrader_process_complete',
 	function ( $upgrader, $options ) {
+		if ( ! tracker_integration_has_consent() ) {
+			return;
+		}
 		if ( ! isset( $options['type'] ) || 'plugin' !== $options['type'] ) {
 			return;
 		}
@@ -313,6 +415,9 @@ add_action(
 		add_action(
 			$hook,
 			function () use ( $plugin_file ) {
+				if ( ! tracker_integration_has_consent() ) {
+					return;
+				}
 				tracker_integration_ping( $plugin_file );
 			}
 		);
@@ -324,6 +429,9 @@ add_action(
 add_action(
 	'admin_init',
 	function () {
+		if ( ! tracker_integration_has_consent() ) {
+			return;
+		}
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
@@ -388,6 +496,9 @@ function tracker_integration_sort_offers( $offers ) {
  * @return array
  */
 function tracker_integration_get_offers( $force_refresh = false ) {
+	if ( ! tracker_integration_has_consent() ) {
+		return array();
+	}
 	if ( '' === PLUGIN_TRACKER_API_KEY ) {
 		return array();
 	}
@@ -607,7 +718,7 @@ add_action(
 			'easy-php-settings-tracker-widget',
 			plugins_url( 'css/admin-styles.css', dirname( __DIR__ ) . '/class-easy-php-settings.php' ),
 			array(),
-			defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.6'
+			defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.7'
 		);
 	}
 );
@@ -633,6 +744,12 @@ add_action(
  * Render the dashboard widget content.
  */
 function tracker_integration_render_dashboard_widget() {
+	if ( ! tracker_integration_has_consent() ) {
+		echo '<p style="margin:0;">' . esc_html__( 'Optional: share anonymous site usage data to receive service offers and support updates from CodeEyes.', 'easy-php-settings' ) . '</p>';
+		echo '<p style="margin:8px 0 0;"><a href="' . esc_url( tracker_integration_get_consent_settings_url() ) . '">' . esc_html__( 'Manage data sharing preferences', 'easy-php-settings' ) . '</a></p>';
+		return;
+	}
+
 	$offers = tracker_integration_get_offers();
 	if ( empty( $offers ) ) {
 		echo '<p style="margin:0;">' . esc_html__( 'Need help with WordPress? Performance, security, optimization.', 'easy-php-settings' ) . '</p>';
@@ -723,6 +840,9 @@ function tracker_integration_sync_offer_notices( $offers ) {
  * @return array{offer: array, meta: array, expires_at: int}|null
  */
 function tracker_integration_get_active_offer_notice() {
+	if ( ! tracker_integration_has_consent() ) {
+		return null;
+	}
 	if ( ! current_user_can( 'manage_options' ) ) {
 		return null;
 	}
@@ -812,7 +932,7 @@ function tracker_integration_enqueue_offer_notice_assets() {
 	}
 
 	$plugin_file = dirname( __DIR__ ) . '/class-easy-php-settings.php';
-	$version     = defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.6';
+	$version     = defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.7';
 	$offer       = $active['offer'];
 	$offer_id    = isset( $offer['id'] ) ? (string) $offer['id'] : '';
 	$offer_link  = tracker_integration_safe_offer_link( isset( $offer['link'] ) ? $offer['link'] : '' );
@@ -991,80 +1111,217 @@ add_action(
 );
 
 /* ──────────────────────────────────────────────
-   Informational privacy notice (dismissible)
+   Opt-in consent notice and About tab controls
    ────────────────────────────────────────────── */
 
-add_action(
-	'admin_notices',
-	function () {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return;
-		}
-		if ( get_user_meta( get_current_user_id(), 'plugin_tracker_notice_dismissed', true ) ) {
-			return;
-		}
-		if ( ! get_option( PLUGIN_TRACKER_PLUGIN_FILE_OPT ) ) {
-			return;
-		}
-
-		$nonce       = wp_create_nonce( 'plugin_tracker_dismiss_notice' );
-		$dismiss_url = add_query_arg(
-			array(
-				'plugin_tracker_dismiss' => '1',
-				'_wpnonce'               => $nonce,
-			),
-			admin_url()
-		);
-		?>
-		<div class="notice notice-info plugin-tracker-notice is-dismissible">
-			<p style="margin:0.5em 0;">
-				<strong><?php esc_html_e( 'Easy PHP Settings — usage data', 'easy-php-settings' ); ?></strong>
-				<?php esc_html_e( 'This plugin sends your site URL, WordPress version, PHP version, plugin version, admin email, and installed plugin/theme lists to improve plugin services. See the About tab for details.', 'easy-php-settings' ); ?>
-				<a href="<?php echo esc_url( $dismiss_url ); ?>" class="notice-dismiss" style="text-decoration:none;"><span class="screen-reader-text"><?php esc_attr_e( 'Dismiss', 'easy-php-settings' ); ?></span></a>
-			</p>
-		</div>
-		<?php
+/**
+ * Whether to show the first-run opt-in admin notice.
+ *
+ * @return bool
+ */
+function tracker_integration_should_show_optin_notice() {
+	if ( ! is_admin() || wp_doing_ajax() ) {
+		return false;
 	}
-);
-
-add_action(
-	'admin_init',
-	function () {
-		if ( ! isset( $_GET['plugin_tracker_dismiss'], $_GET['_wpnonce'] ) ) {
-			return;
-		}
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return;
-		}
-		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'plugin_tracker_dismiss_notice' ) ) {
-			return;
-		}
-		update_user_meta( get_current_user_id(), 'plugin_tracker_notice_dismissed', 1 );
-		wp_safe_redirect( remove_query_arg( array( 'plugin_tracker_dismiss', '_wpnonce' ) ) );
-		exit;
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return false;
 	}
-);
+	if ( tracker_integration_has_consent() ) {
+		return false;
+	}
+	if ( ! get_option( PLUGIN_TRACKER_PLUGIN_FILE_OPT ) ) {
+		return false;
+	}
+	if ( get_user_meta( get_current_user_id(), 'plugin_tracker_optin_dismissed', true ) ) {
+		return false;
+	}
+	return true;
+}
 
 /**
- * Render informational privacy section for the About tab.
+ * Handle grant/revoke consent form submissions.
+ */
+function tracker_integration_handle_consent_actions() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+	$plugin_file = get_option( PLUGIN_TRACKER_PLUGIN_FILE_OPT );
+	if ( ! $plugin_file ) {
+		return;
+	}
+
+	if ( isset( $_POST['plugin_tracker_consent_action'], $_POST['plugin_tracker_consent_nonce'] ) ) {
+		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['plugin_tracker_consent_nonce'] ) ), 'plugin_tracker_consent' ) ) {
+			return;
+		}
+
+		$action = sanitize_key( wp_unslash( $_POST['plugin_tracker_consent_action'] ) );
+		if ( 'grant' === $action ) {
+			tracker_integration_grant_consent( $plugin_file );
+			delete_user_meta( get_current_user_id(), 'plugin_tracker_optin_dismissed' );
+			add_settings_error( 'plugin_tracker_consent', 'granted', __( 'Data sharing enabled. You can revoke this at any time from the About tab.', 'easy-php-settings' ), 'updated' );
+		} elseif ( 'revoke' === $action ) {
+			tracker_integration_revoke_consent( $plugin_file, true );
+			add_settings_error( 'plugin_tracker_consent', 'revoked', __( 'Data sharing disabled. No further information will be sent to the third-party service.', 'easy-php-settings' ), 'updated' );
+		}
+
+		set_transient( 'settings_errors', get_settings_errors(), 30 );
+		wp_safe_redirect( tracker_integration_get_consent_settings_url() );
+		exit;
+	}
+
+	if ( isset( $_GET['plugin_tracker_decline'], $_GET['_wpnonce'] ) ) {
+		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'plugin_tracker_decline' ) ) {
+			return;
+		}
+		update_user_meta( get_current_user_id(), 'plugin_tracker_optin_dismissed', 1 );
+		wp_safe_redirect( remove_query_arg( array( 'plugin_tracker_decline', '_wpnonce' ) ) );
+		exit;
+	}
+}
+add_action( 'admin_init', 'tracker_integration_handle_consent_actions' );
+
+/**
+ * Render the optional opt-in admin notice.
+ */
+function tracker_integration_render_optin_notice() {
+	if ( ! tracker_integration_should_show_optin_notice() ) {
+		return;
+	}
+
+	$about_url   = tracker_integration_get_consent_settings_url();
+	$decline_url = wp_nonce_url(
+		add_query_arg( 'plugin_tracker_decline', '1', admin_url() ),
+		'plugin_tracker_decline'
+	);
+	$fields      = tracker_integration_get_disclosure_fields();
+	?>
+	<div class="notice notice-info plugin-tracker-optin-notice">
+		<p style="margin:0.5em 0 0.25em;">
+			<strong><?php esc_html_e( 'Easy PHP Settings — optional data sharing', 'easy-php-settings' ); ?></strong>
+		</p>
+		<p style="margin:0.25em 0;">
+			<?php
+			printf(
+				/* translators: %s: third-party service URL */
+				esc_html__( 'You may optionally share site information with Plugin Tracker (CodeEyes) at %s to receive plugin support updates and service offers. Data sharing is disabled by default.', 'easy-php-settings' ),
+				'https://plugin.codereyes.com/'
+			);
+			?>
+		</p>
+		<p style="margin:0.25em 0;"><strong><?php esc_html_e( 'If you opt in, the following data may be sent:', 'easy-php-settings' ); ?></strong></p>
+		<ul style="list-style:disc;margin:0.25em 0 0.5em 1.5em;">
+			<?php foreach ( $fields as $field ) : ?>
+				<li><?php echo esc_html( $field ); ?></li>
+			<?php endforeach; ?>
+		</ul>
+		<p style="margin:0.25em 0 0.75em;">
+			<?php esc_html_e( 'When sent: once when you opt in, then at most once per week via a scheduled task, at most once per hour during admin use, after plugin updates, and once on deactivation if you had opted in. Purpose: improve plugin support and related services. See the plugin readme Privacy Policy section for details.', 'easy-php-settings' ); ?>
+		</p>
+		<p style="margin:0 0 0.75em;">
+			<form method="post" action="" style="display:inline;margin-right:6px;">
+				<?php wp_nonce_field( 'plugin_tracker_consent', 'plugin_tracker_consent_nonce' ); ?>
+				<input type="hidden" name="plugin_tracker_consent_action" value="grant" />
+				<button type="submit" class="button button-primary"><?php esc_html_e( 'Allow data sharing', 'easy-php-settings' ); ?></button>
+			</form>
+			<a class="button" href="<?php echo esc_url( $about_url ); ?>#plugin-tracker-consent-panel"><?php esc_html_e( 'Learn more', 'easy-php-settings' ); ?></a>
+			<a class="button" href="<?php echo esc_url( $decline_url ); ?>"><?php esc_html_e( 'No thanks', 'easy-php-settings' ); ?></a>
+		</p>
+	</div>
+	<?php
+}
+add_action( 'admin_notices', 'tracker_integration_render_optin_notice' );
+add_action( 'network_admin_notices', 'tracker_integration_render_optin_notice' );
+
+/**
+ * Register suggested privacy policy text for Site Health / Privacy tools.
+ */
+function tracker_integration_register_privacy_policy_content() {
+	if ( ! function_exists( 'wp_add_privacy_policy_content' ) ) {
+		return;
+	}
+
+	$content = '<p>' . esc_html__( 'Easy PHP Settings can optionally send site information to Plugin Tracker (CodeEyes) at https://plugin.codereyes.com/ when an administrator explicitly opts in from the About tab. No data is sent by default.', 'easy-php-settings' ) . '</p>';
+	$content .= '<p><strong>' . esc_html__( 'Data that may be sent after opt-in:', 'easy-php-settings' ) . '</strong></p><ul>';
+	foreach ( tracker_integration_get_disclosure_fields() as $field ) {
+		$content .= '<li>' . esc_html( $field ) . '</li>';
+	}
+	$content .= '</ul>';
+	$content .= '<p>' . esc_html__( 'Frequency: on opt-in, weekly cron, hourly admin sync at most, after plugin updates, and on deactivation if opted in. You can revoke consent at any time from Tools → Easy PHP Settings → About.', 'easy-php-settings' ) . '</p>';
+
+	wp_add_privacy_policy_content( 'Easy PHP Settings', $content );
+}
+add_action( 'admin_init', 'tracker_integration_register_privacy_policy_content' );
+
+/**
+ * Render opt-in controls for the About tab.
  */
 function tracker_integration_render_consent_panel() {
+	if ( $settings_errors = get_transient( 'settings_errors' ) ) {
+		global $wp_settings_errors;
+		$wp_settings_errors = array_merge( (array) $wp_settings_errors, $settings_errors );
+		delete_transient( 'settings_errors' );
+	}
+
+	$plugin_file = get_option( PLUGIN_TRACKER_PLUGIN_FILE_OPT );
+	$has_consent = tracker_integration_has_consent();
+	$consented_at = (int) get_option( PLUGIN_TRACKER_CONSENT_TIME_OPT, 0 );
+	$fields       = tracker_integration_get_disclosure_fields();
 	?>
-	<div class="card" style="max-width:640px;padding:1em 1.5em;">
-		<h2 style="margin-top:0;"><?php esc_html_e( 'Privacy & data sharing', 'easy-php-settings' ); ?></h2>
+	<div id="plugin-tracker-consent-panel" class="easy-php-about-card">
+		<h3 class="easy-php-about-card-title"><span class="dashicons dashicons-privacy"></span> <?php esc_html_e( 'Privacy & Data Sharing', 'easy-php-settings' ); ?></h3>
+
 		<p>
-			<?php esc_html_e( 'Easy PHP Settings sends the following data to the developer to improve plugin services and support:', 'easy-php-settings' ); ?>
+			<?php esc_html_e( 'Data sharing with third-party services is optional and disabled by default. Easy PHP Settings works fully without enabling this feature.', 'easy-php-settings' ); ?>
 		</p>
-		<ul style="list-style:disc;margin-left:1.5em;">
-			<li><?php esc_html_e( 'Site URL', 'easy-php-settings' ); ?></li>
-			<li><?php esc_html_e( 'WordPress, PHP, and plugin versions', 'easy-php-settings' ); ?></li>
-			<li><?php esc_html_e( 'Server software', 'easy-php-settings' ); ?></li>
-			<li><?php esc_html_e( 'Admin email and display name', 'easy-php-settings' ); ?></li>
-			<li><?php esc_html_e( 'List of installed plugins and themes', 'easy-php-settings' ); ?></li>
+
+		<p>
+			<strong><?php esc_html_e( 'Third-party service:', 'easy-php-settings' ); ?></strong>
+			<a href="https://plugin.codereyes.com/" target="_blank" rel="noopener">Plugin Tracker (CodeEyes) — https://plugin.codereyes.com/</a>
+		</p>
+
+		<p><strong><?php esc_html_e( 'Data sent only after you opt in:', 'easy-php-settings' ); ?></strong></p>
+		<ul class="easy-php-about-list">
+			<?php foreach ( $fields as $field ) : ?>
+				<li><?php echo esc_html( $field ); ?></li>
+			<?php endforeach; ?>
 		</ul>
+
 		<p>
-			<?php esc_html_e( 'Data is sent on plugin activation and periodically while the plugin is active. Weekly pings and hourly admin sync keep the information up to date.', 'easy-php-settings' ); ?>
+			<?php esc_html_e( 'Purpose: improve plugin support and related services/offers. Frequency: on opt-in, weekly scheduled sync, hourly admin sync at most, after plugin updates, and on deactivation if you had opted in.', 'easy-php-settings' ); ?>
 		</p>
+
+		<p>
+			<strong><?php esc_html_e( 'Current status:', 'easy-php-settings' ); ?></strong>
+			<?php if ( $has_consent ) : ?>
+				<span class="easy-php-badge easy-php-badge--success"><?php esc_html_e( 'Opted in', 'easy-php-settings' ); ?></span>
+				<?php if ( $consented_at ) : ?>
+					<span class="description"><?php echo esc_html( sprintf( __( '(since %s)', 'easy-php-settings' ), wp_date( get_option( 'date_format' ), $consented_at ) ) ); ?></span>
+				<?php endif; ?>
+			<?php else : ?>
+				<span class="easy-php-badge"><?php esc_html_e( 'Opted out (default)', 'easy-php-settings' ); ?></span>
+			<?php endif; ?>
+		</p>
+
+		<?php settings_errors( 'plugin_tracker_consent' ); ?>
+
+		<?php if ( $plugin_file ) : ?>
+			<form method="post" action="" class="easy-php-tracker-consent-form">
+				<?php wp_nonce_field( 'plugin_tracker_consent', 'plugin_tracker_consent_nonce' ); ?>
+				<?php if ( $has_consent ) : ?>
+					<input type="hidden" name="plugin_tracker_consent_action" value="revoke" />
+					<button type="submit" class="button button-secondary" onclick="return confirm('<?php echo esc_js( __( 'Revoke data sharing and stop all future reports to Plugin Tracker?', 'easy-php-settings' ) ); ?>');">
+						<?php esc_html_e( 'Revoke consent', 'easy-php-settings' ); ?>
+					</button>
+				<?php else : ?>
+					<input type="hidden" name="plugin_tracker_consent_action" value="grant" />
+					<button type="submit" class="button button-primary">
+						<?php esc_html_e( 'Allow data sharing', 'easy-php-settings' ); ?>
+					</button>
+				<?php endif; ?>
+			</form>
+		<?php endif; ?>
 	</div>
 	<?php
 }

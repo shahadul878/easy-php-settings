@@ -3,7 +3,7 @@
  * Plugin Name: Easy PHP Settings
  * Plugin URI:  https://github.com/easy-php-settings
  * Description: An easy way to manage common PHP INI settings from the WordPress admin panel.
- * Version:     1.1.6
+ * Version:     1.1.7
  * Author:      H M Shahadul Islam
  * Author URI:  https://github.com/shahadul878
  * License:     GPL-2.0+
@@ -37,8 +37,8 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-module-loader.ph
 require_once plugin_dir_path( __FILE__ ) . 'includes/plugin-tracker-integration.php';
 
 register_activation_hook( __FILE__, function () {
-	if ( function_exists( 'tracker_integration_report_install' ) ) {
-		tracker_integration_report_install( __FILE__ );
+	if ( function_exists( 'tracker_integration_on_activate' ) ) {
+		tracker_integration_on_activate( __FILE__ );
 	}
 	// Best-effort: migrate any legacy DB-stored wp-config backups to the
 	// filesystem (where they belong) and clear the option rows.
@@ -61,9 +61,8 @@ register_activation_hook( __FILE__, function () {
 } );
 
 register_deactivation_hook( __FILE__, function () {
-	if ( function_exists( 'tracker_integration_report_deactivate' ) ) {
-		tracker_integration_report_deactivate( __FILE__ );
-		tracker_integration_unschedule_cron( __FILE__ );
+	if ( function_exists( 'tracker_integration_on_deactivate' ) ) {
+		tracker_integration_on_deactivate( __FILE__ );
 	}
 } );
 
@@ -116,7 +115,7 @@ class Easy_PHP_Settings {
 	/**
 	 * @var string
 	 */
-	private $version = '1.1.6';
+	private $version = '1.1.7';
 
 	/**
 	 * @var array

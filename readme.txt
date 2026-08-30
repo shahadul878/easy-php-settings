@@ -4,7 +4,7 @@ Contributors: shahadul878,codereyes
 Tags: php settings, ini, performance, debug, wp-config
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 1.1.6
+Stable tag: 1.1.7
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -35,9 +35,13 @@ Easy PHP Settings provides a user-friendly interface to view and manage crucial 
 
 This plugin is perfect for developers and site administrators who want a quick and safe way to view and adjust their site's technical settings.
 
-**Privacy & usage data:**
+**Privacy & data sharing:**
 
-On activation and periodically while active, Easy PHP Settings sends basic site information to the developer to improve plugin services: site URL, WordPress/PHP/plugin versions, server software, admin email, and lists of installed plugins and themes. An informational admin notice explains this on first use; see the About tab for full details.
+Easy PHP Settings includes an **optional**, **default-off** integration with Plugin Tracker (CodeEyes) at https://plugin.codereyes.com/. **No data is sent until an administrator explicitly opts in** from the About tab or the optional admin notice.
+
+If you opt in, the following may be transmitted: site URL; WordPress, PHP, and plugin versions; server software; administrator email and display name; and lists of installed plugins and themes (name, version, active status). Data is sent once when you opt in, then at most once per week (scheduled task), at most once per hour during admin use, after plugin updates, and once on deactivation if you had opted in. Purpose: improve plugin support and related services/offers.
+
+You can revoke consent at any time under **Tools → Easy PHP Settings → About → Privacy & Data Sharing**. The plugin works fully without enabling data sharing. See the **Privacy Policy** section below for full details.
 
 == Pro Features ==
 
@@ -123,9 +127,40 @@ These switches directly control the debugging constants in your `wp-config.php` 
 3. PHP Settings — Full table of all PHP directives with search and copy functionality.
 4. Extensions — View all loaded PHP extensions by category with missing extension alerts.
 5. Status — Live comparison of current vs. recommended PHP and WordPress memory values.
-6. About — Plugin information, author details, and support links.
+6. About — Plugin information, privacy & data sharing controls, author details, and support links.
+
+== Privacy Policy ==
+
+This plugin can optionally send site information to a third-party service when an administrator explicitly opts in. **Data sharing is disabled by default.**
+
+**Third-party service:** Plugin Tracker (CodeEyes) — https://plugin.codereyes.com/
+
+**Data that may be sent after opt-in:**
+* Site URL
+* WordPress, PHP, and Easy PHP Settings plugin versions
+* Server software
+* Administrator email address and display name
+* Installed plugins and themes (name, version, active status)
+
+**When data is sent:** Once when you opt in; then at most once per week via a scheduled task; at most once per hour during admin dashboard use; after plugin updates; and once on plugin deactivation if you had opted in.
+
+**Purpose:** Improve plugin support, service updates, and optional offers from the developer.
+
+**How to enable or revoke:** Go to **Tools → Easy PHP Settings → About → Privacy & Data Sharing**. Use **Allow data sharing** to opt in or **Revoke consent** to stop all future transmission and clear scheduled sync tasks.
+
+**No data before opt-in:** Activating or using Easy PHP Settings does not send any information to plugin.codereyes.com until you explicitly allow it.
 
 == Changelog ==
+
+= 1.1.7 =
+Released: August 30, 2026
+
+* Fixed: WordPress.org Guideline 7 compliance — all communication with plugin.codereyes.com is gated behind explicit, default-off administrator opt-in.
+* Added: Opt-in admin notice with full disclosure and Allow / No thanks actions; About tab privacy panel with enable and revoke controls.
+* Added: Suggested privacy policy content via wp_add_privacy_policy_content().
+* Changed: Plugin activation no longer sends install reports or schedules tracker cron until consent is granted.
+* Changed: Dashboard offers widget, offer notices, and external offer images load only after opt-in.
+* Updated: Readme privacy documentation to accurately describe optional data sharing.
 
 = 1.1.6 =
 Released: June 20, 2026
@@ -134,19 +169,15 @@ Released: June 20, 2026
 * Improved: Redesigned save button with sticky footer bar, gradient styling, and loading spinner overlay during form submission.
 * Improved: PHP Settings table with search toolbar, status badges, select-all, and copy-selected actions.
 * Improved: Advanced Tools section combining Configuration Generator, Test Settings, and Danger Zone into a unified grid layout.
-* Added: Dashboard widget offers displayed as post-style cards with images from the plugin tracker API.
-* Added: 7-day countdown admin notice for new tracker offers with dismiss and snooze actions.
-* Fixed: Plugin tracker restores install reporting without opt-in, full payload (admin email, plugins, themes), and blocking install requests.
-* Fixed: Deactivation hook reports uninstalls and clears scheduled tracker pings.
-* Improved: Tracker offer cache refresh and hourly admin sync for up-to-date dashboard data.
+* Added: Dashboard widget offers displayed as post-style cards with images from the plugin tracker API (requires opt-in as of 1.1.7).
+* Added: 7-day countdown admin notice for new tracker offers with dismiss and snooze actions (requires opt-in as of 1.1.7).
+* Improved: Tracker offer cache refresh and hourly admin sync for up-to-date dashboard data (requires opt-in as of 1.1.7).
 
 = 1.1.5 =
 Released: May 27, 2026
 
 * Added: Admin notice asking the user to leave a 5-star review on WordPress.org after the plugin has been installed for 7 days. Includes "Rate now", "Maybe later" (7-day snooze), and "Already did / Don't show again" actions.
-* Fixed: Plugin usage tracker now sends data on activation without requiring opt-in, restores full payload (admin email, plugin/theme inventory), and uses blocking requests for reliable install reporting.
-* Fixed: Tracker deactivation hook reports uninstalls and clears scheduled pings.
-* Improved: Hourly admin sync keeps tracker dashboard data up to date between weekly cron pings.
+* Note: Tracker behavior in 1.1.5 was superseded by explicit opt-in requirements in 1.1.7.
 
 = 1.1.4 =
 Released: March 14, 2026
@@ -240,6 +271,9 @@ Released: March 5, 2026
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.1.7 =
+Restores WordPress.org compliance: optional data sharing with plugin.codereyes.com is disabled by default and requires explicit administrator opt-in. No outbound tracker requests until you allow it from the About tab.
 
 = 1.1.6 =
 Major admin UI refresh with redesigned settings pages, improved save experience, Advanced Tools section, and enhanced plugin tracker dashboard offers.

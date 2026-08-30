@@ -86,28 +86,43 @@ $wpdb->query(
 	)
 );
 
-// Plugin Tracker integration: cron, consent state, and options.
+// Plugin Tracker integration: deactivate ping if opted in, then remove all tracker data.
+$tracker_file     = dirname( __FILE__ ) . '/includes/plugin-tracker-integration.php';
 $main_plugin_file = dirname( __FILE__ ) . '/class-easy-php-settings.php';
-$basename        = plugin_basename( $main_plugin_file );
-$cron_option     = 'plugin_tracker_cron_' . md5( $basename );
-$hook_name       = 'plugin_tracker_ping_' . preg_replace( '/[^a-z0-9_-]/i', '_', $basename );
 
-wp_clear_scheduled_hook( $hook_name );
-delete_option( $cron_option );
-delete_option( 'plugin_tracker_plugin_file' );
-delete_option( 'plugin_tracker_consent' );
-delete_option( 'plugin_tracker_consent_time' );
-delete_option( 'plugin_tracker_known_offer_ids' );
-delete_option( 'plugin_tracker_offer_notices' );
+if ( file_exists( $tracker_file ) ) {
+	require_once $tracker_file;
 
-// Best-effort: notify a denied state so the tracker can stop sending.
-$wpdb->delete( $wpdb->usermeta, array( 'meta_key' => 'plugin_tracker_notice_dismissed' ) );
+	$had_consent = '1' === get_option( 'plugin_tracker_consent', '0' );
+	$plugin_file = get_option( 'plugin_tracker_plugin_file', $main_plugin_file );
 
-// Plugin Tracker transients.
-$wpdb->query(
-	$wpdb->prepare(
-		"DELETE FROM $wpdb->options WHERE option_name LIKE %s OR option_name LIKE %s",
-		$wpdb->esc_like( '_transient_plugin_tracker_' ) . '%',
-		$wpdb->esc_like( '_transient_timeout_plugin_tracker_' ) . '%'
-	)
-);
+	if ( $had_consent && $plugin_file && function_exists( 'tracker_integration_report_deactivate' ) ) {
+		tracker_integration_report_deactivate( $plugin_file );
+	}
+
+	if ( function_exists( 'tracker_integration_cleanup' ) ) {
+		tracker_integration_cleanup( $main_plugin_file );
+	}
+} else {
+	$basename    = plugin_basename( $main_plugin_file );
+	$cron_option = 'plugin_tracker_cron_' . md5( $basename );
+	$hook_name   = 'plugin_tracker_ping_' . preg_replace( '/[^a-z0-9_-]/i', '_', $basename );
+
+	wp_clear_scheduled_hook( $hook_name );
+	delete_option( $cron_option );
+	delete_option( 'plugin_tracker_plugin_file' );
+	delete_option( 'plugin_tracker_consent' );
+	delete_option( 'plugin_tracker_consent_time' );
+	delete_option( 'plugin_tracker_known_offer_ids' );
+	delete_option( 'plugin_tracker_offer_notices' );
+
+	$wpdb->delete( $wpdb->usermeta, array( 'meta_key' => 'plugin_tracker_optin_dismissed' ) );
+
+	$wpdb->query(
+		$wpdb->prepare(
+			"DELETE FROM $wpdb->options WHERE option_name LIKE %s OR option_name LIKE %s",
+			$wpdb->esc_like( '_transient_plugin_tracker_' ) . '%',
+			$wpdb->esc_like( '_transient_timeout_plugin_tracker_' ) . '%'
+		)
+	);
+}
