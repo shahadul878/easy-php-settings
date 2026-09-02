@@ -6,7 +6,7 @@
  * administrator has explicitly opted in. No data is sent by default.
  *
  * @package PluginTrackerIntegration
- * @version 1.1.7
+ * @version 1.1.8
  * @author H M Shahadul Islam
  * @license GPL-2.0+
  */
@@ -21,6 +21,14 @@ if ( ! defined( 'PLUGIN_TRACKER_API_URL' ) ) {
 
 if ( ! defined( 'PLUGIN_TRACKER_API_KEY' ) ) {
 	define( 'PLUGIN_TRACKER_API_KEY', 'pt_RVdd3aNGApDHlHwNRkqnSiBjN19IpmcnYJcy3TpG' );
+}
+
+if ( ! defined( 'PLUGIN_TRACKER_PRIVACY_URL' ) ) {
+	define( 'PLUGIN_TRACKER_PRIVACY_URL', 'https://codereyes.com/privacy-policy/' );
+}
+
+if ( ! defined( 'PLUGIN_TRACKER_TERMS_URL' ) ) {
+	define( 'PLUGIN_TRACKER_TERMS_URL', 'https://github.com/shahadul878/easy-php-settings/blob/master/legal/plugin-tracker-terms.md' );
 }
 
 const PLUGIN_TRACKER_PLUGIN_FILE_OPT = 'plugin_tracker_plugin_file';
@@ -353,7 +361,13 @@ function tracker_integration_cleanup( $plugin_file = null ) {
 		tracker_integration_unschedule_cron( $plugin_file );
 		delete_option( 'plugin_tracker_cron_' . md5( plugin_basename( $plugin_file ) ) );
 	} else {
-		$opts = $wpdb->get_col( "SELECT option_name FROM $wpdb->options WHERE option_name LIKE 'plugin_tracker_cron_%'" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- locate leftover tracker cron options during uninstall.
+		$opts = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT option_name FROM $wpdb->options WHERE option_name LIKE %s",
+				$wpdb->esc_like( 'plugin_tracker_cron_' ) . '%'
+			)
+		);
 		foreach ( $opts as $name ) {
 			$hook = get_option( $name );
 			if ( $hook ) {
@@ -369,7 +383,15 @@ function tracker_integration_cleanup( $plugin_file = null ) {
 	delete_option( PLUGIN_TRACKER_KNOWN_OFFERS_OPT );
 	delete_option( PLUGIN_TRACKER_OFFER_NOTICES_OPT );
 
-	$wpdb->query( "DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_plugin_tracker_%' OR option_name LIKE '_transient_timeout_plugin_tracker_%'" );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- uninstall/cleanup of tracker transients.
+	$wpdb->query(
+		$wpdb->prepare(
+			"DELETE FROM $wpdb->options WHERE option_name LIKE %s OR option_name LIKE %s",
+			$wpdb->esc_like( '_transient_plugin_tracker_' ) . '%',
+			$wpdb->esc_like( '_transient_timeout_plugin_tracker_' ) . '%'
+		)
+	);
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- targeted usermeta cleanup on uninstall.
 	$wpdb->delete( $wpdb->usermeta, array( 'meta_key' => 'plugin_tracker_optin_dismissed' ) );
 }
 
@@ -716,9 +738,9 @@ add_action(
 		}
 		wp_enqueue_style(
 			'easy-php-settings-tracker-widget',
-			plugins_url( 'css/admin-styles.css', dirname( __DIR__ ) . '/class-easy-php-settings.php' ),
-			array(),
-			defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.7'
+			plugins_url( 'css/tracker-widget.css', dirname( __DIR__ ) . '/class-easy-php-settings.php' ),
+			array( 'dashicons' ),
+			defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.8'
 		);
 	}
 );
@@ -932,14 +954,14 @@ function tracker_integration_enqueue_offer_notice_assets() {
 	}
 
 	$plugin_file = dirname( __DIR__ ) . '/class-easy-php-settings.php';
-	$version     = defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.7';
+	$version     = defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.8';
 	$offer       = $active['offer'];
 	$offer_id    = isset( $offer['id'] ) ? (string) $offer['id'] : '';
 	$offer_link  = tracker_integration_safe_offer_link( isset( $offer['link'] ) ? $offer['link'] : '' );
 
 	wp_enqueue_style(
-		'easy-php-settings-offer-notice',
-		plugins_url( 'css/admin-styles.css', $plugin_file ),
+		'easy-php-settings-notices',
+		plugins_url( 'css/admin-notices.css', $plugin_file ),
 		array( 'dashicons' ),
 		$version
 	);
@@ -961,7 +983,9 @@ function tracker_integration_enqueue_offer_notice_assets() {
 			'offerId'            => $offer_id,
 			'offerUrl'           => $offer_link,
 			'expiredLabel'       => __( 'Expired', 'easy-php-settings' ),
+			/* translators: 1: number of days remaining, 2: number of hours remaining */
 			'daysHoursLabel'     => __( '%1$d days %2$d hours left', 'easy-php-settings' ),
+			/* translators: 1: number of hours remaining, 2: number of minutes remaining */
 			'hoursMinutesLabel'  => __( '%1$d hours %2$d minutes left', 'easy-php-settings' ),
 		)
 	);
@@ -989,11 +1013,11 @@ function tracker_integration_render_offer_notice() {
 	$remaining  = max( 0, $expires_at - time() );
 	$days_left  = (int) floor( $remaining / DAY_IN_SECONDS );
 	$hours_left = (int) floor( ( $remaining % DAY_IN_SECONDS ) / HOUR_IN_SECONDS );
-	$expires_on = wp_date( get_option( 'date_format' ), $expires_at );
+	$expires_on = date_i18n( get_option( 'date_format' ), $expires_at );
 
 	if ( $days_left > 0 ) {
-		/* translators: 1: days remaining, 2: hours remaining, 3: expiry date */
 		$timer_text = sprintf(
+			/* translators: 1: days remaining, 2: hours remaining, 3: expiry date */
 			__( '%1$d days %2$d hours left (until %3$s)', 'easy-php-settings' ),
 			$days_left,
 			$hours_left,
@@ -1001,8 +1025,8 @@ function tracker_integration_render_offer_notice() {
 		);
 	} else {
 		$minutes_left = (int) floor( ( $remaining % HOUR_IN_SECONDS ) / MINUTE_IN_SECONDS );
-		/* translators: 1: hours remaining, 2: minutes remaining, 3: expiry date */
-		$timer_text = sprintf(
+		$timer_text   = sprintf(
+			/* translators: 1: hours remaining, 2: minutes remaining, 3: expiry date */
 			__( '%1$d hours %2$d minutes left (until %3$s)', 'easy-php-settings' ),
 			$hours_left,
 			$minutes_left,
@@ -1217,7 +1241,12 @@ function tracker_integration_render_optin_notice() {
 			<?php endforeach; ?>
 		</ul>
 		<p style="margin:0.25em 0 0.75em;">
-			<?php esc_html_e( 'When sent: once when you opt in, then at most once per week via a scheduled task, at most once per hour during admin use, after plugin updates, and once on deactivation if you had opted in. Purpose: improve plugin support and related services. See the plugin readme Privacy Policy section for details.', 'easy-php-settings' ); ?>
+			<?php esc_html_e( 'When sent: once when you opt in, then at most once per week via a scheduled task, at most once per hour during admin use, after plugin updates, and once on deactivation if you had opted in. Purpose: improve plugin support and related services.', 'easy-php-settings' ); ?>
+		</p>
+		<p style="margin:0.25em 0 0.75em;">
+			<a href="<?php echo esc_url( PLUGIN_TRACKER_PRIVACY_URL ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Privacy Policy', 'easy-php-settings' ); ?></a>
+			&nbsp;|&nbsp;
+			<a href="<?php echo esc_url( PLUGIN_TRACKER_TERMS_URL ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Terms of Service', 'easy-php-settings' ); ?></a>
 		</p>
 		<p style="margin:0 0 0.75em;">
 			<form method="post" action="" style="display:inline;margin-right:6px;">
@@ -1249,6 +1278,7 @@ function tracker_integration_register_privacy_policy_content() {
 	}
 	$content .= '</ul>';
 	$content .= '<p>' . esc_html__( 'Frequency: on opt-in, weekly cron, hourly admin sync at most, after plugin updates, and on deactivation if opted in. You can revoke consent at any time from Tools → Easy PHP Settings → About.', 'easy-php-settings' ) . '</p>';
+	$content .= '<p><a href="' . esc_url( PLUGIN_TRACKER_PRIVACY_URL ) . '">' . esc_html__( 'Privacy Policy', 'easy-php-settings' ) . '</a> | <a href="' . esc_url( PLUGIN_TRACKER_TERMS_URL ) . '">' . esc_html__( 'Terms of Service', 'easy-php-settings' ) . '</a></p>';
 
 	wp_add_privacy_policy_content( 'Easy PHP Settings', $content );
 }
@@ -1281,6 +1311,12 @@ function tracker_integration_render_consent_panel() {
 			<a href="https://plugin.codereyes.com/" target="_blank" rel="noopener">Plugin Tracker (CodeEyes) — https://plugin.codereyes.com/</a>
 		</p>
 
+		<p>
+			<a href="<?php echo esc_url( PLUGIN_TRACKER_PRIVACY_URL ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Privacy Policy', 'easy-php-settings' ); ?></a>
+			&nbsp;|&nbsp;
+			<a href="<?php echo esc_url( PLUGIN_TRACKER_TERMS_URL ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Terms of Service', 'easy-php-settings' ); ?></a>
+		</p>
+
 		<p><strong><?php esc_html_e( 'Data sent only after you opt in:', 'easy-php-settings' ); ?></strong></p>
 		<ul class="easy-php-about-list">
 			<?php foreach ( $fields as $field ) : ?>
@@ -1297,7 +1333,17 @@ function tracker_integration_render_consent_panel() {
 			<?php if ( $has_consent ) : ?>
 				<span class="easy-php-badge easy-php-badge--success"><?php esc_html_e( 'Opted in', 'easy-php-settings' ); ?></span>
 				<?php if ( $consented_at ) : ?>
-					<span class="description"><?php echo esc_html( sprintf( __( '(since %s)', 'easy-php-settings' ), wp_date( get_option( 'date_format' ), $consented_at ) ) ); ?></span>
+					<?php
+					echo '<span class="description">';
+					echo esc_html(
+						sprintf(
+							/* translators: %s: date when data sharing was enabled */
+							__( '(since %s)', 'easy-php-settings' ),
+							date_i18n( get_option( 'date_format' ), $consented_at )
+						)
+					);
+					echo '</span>';
+					?>
 				<?php endif; ?>
 			<?php else : ?>
 				<span class="easy-php-badge"><?php esc_html_e( 'Opted out (default)', 'easy-php-settings' ); ?></span>

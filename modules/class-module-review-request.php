@@ -44,7 +44,7 @@ class Easy_Module_Review_Request extends Easy_Module_Base {
 	/**
 	 * WordPress.org review URL.
 	 */
-	const REVIEW_URL = 'https://wordpress.org/support/plugin/easy-php-settings/reviews/?filter=5#new-post';
+	const REVIEW_URL = 'https://wordpress.org/support/plugin/easy-php-settings/reviews/';
 
 	/* ─── Hooks ───────────────────────────────── */
 
@@ -69,10 +69,10 @@ class Easy_Module_Review_Request extends Easy_Module_Base {
 		// The main stylesheet is only registered on the plugin's own admin
 		// page; re-register it on the other screens that host the popup so
 		// the modal styles are always available.
-		if ( ! wp_style_is( 'easy-php-settings-styles', 'enqueued' ) ) {
+		if ( ! wp_style_is( 'easy-php-settings-notices', 'enqueued' ) ) {
 			wp_enqueue_style(
-				'easy-php-settings-styles',
-				plugin_dir_url( dirname( __FILE__ ) ) . 'css/admin-styles.css',
+				'easy-php-settings-notices',
+				plugin_dir_url( dirname( __FILE__ ) ) . 'css/admin-notices.css',
 				array( 'dashicons' ),
 				$this->plugin->get_version()
 			);
@@ -209,7 +209,7 @@ class Easy_Module_Review_Request extends Easy_Module_Base {
 						<strong><?php esc_html_e( 'Enjoying Easy PHP Settings?', 'easy-php-settings' ); ?></strong>
 					</p>
 					<p class="easy-php-review-notice-message">
-						<?php esc_html_e( 'You\'ve been using Easy PHP Settings for a while now — awesome! Would you mind taking a moment to leave a quick 5-star review on WordPress.org? It would mean a lot and helps other users discover the plugin.', 'easy-php-settings' ); ?>
+						<?php esc_html_e( 'You\'ve been using Easy PHP Settings for a while now — awesome! Would you mind taking a moment to leave a review on WordPress.org? It would mean a lot and helps other users discover the plugin.', 'easy-php-settings' ); ?>
 					</p>
 					<p class="easy-php-review-notice-actions">
 						<button type="button" class="button button-primary easy-php-review-btn" data-review-action="rate">

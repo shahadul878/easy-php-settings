@@ -22,7 +22,7 @@ msgstr ""
 
 #. Plugin URI of the plugin
 #: easy-php-settings.php
-msgid "https://github.com/easy-php-settings"
+msgid "https://github.com/shahadul878/easy-php-settings"
 msgstr ""
 
 #. Description of the plugin

@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: Easy PHP Settings
- * Plugin URI:  https://github.com/easy-php-settings
+ * Plugin URI:  https://github.com/shahadul878/easy-php-settings
  * Description: An easy way to manage common PHP INI settings from the WordPress admin panel.
- * Version:     1.1.7
+ * Version:     1.1.8
  * Author:      H M Shahadul Islam
  * Author URI:  https://github.com/shahadul878
  * License:     GPL-2.0+
@@ -17,6 +17,38 @@
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
+
+/**
+ * Keep Plugin Check aligned with the WordPress.org zip.
+ *
+ * Git, GitHub Actions, and other development paths are listed in .distignore
+ * and are not shipped. Ignore them here so a working-tree scan matches the
+ * distributed plugin.
+ *
+ * @param array $directories Directories Plugin Check already ignores.
+ * @return array
+ */
+function easy_php_settings_plugin_check_ignore_directories( $directories ) {
+	return array_merge(
+		(array) $directories,
+		array( '.git', '.github', '.claude', '.cursor', '.wordpress-org', 'scripts' )
+	);
+}
+add_filter( 'wp_plugin_check_ignore_directories', 'easy_php_settings_plugin_check_ignore_directories' );
+
+/**
+ * Ignore development-only hidden files that are not part of the plugin zip.
+ *
+ * @param array $files Files Plugin Check already ignores.
+ * @return array
+ */
+function easy_php_settings_plugin_check_ignore_files( $files ) {
+	return array_merge(
+		(array) $files,
+		array( '.gitignore', '.distignore', '.gitattributes' )
+	);
+}
+add_filter( 'wp_plugin_check_ignore_files', 'easy_php_settings_plugin_check_ignore_files' );
 
 // Helper classes.
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easyphpinfo.php';
@@ -44,6 +76,9 @@ register_activation_hook( __FILE__, function () {
 	// filesystem (where they belong) and clear the option rows.
 	if ( method_exists( 'Easy_Config_Backup', 'migrate_legacy_db_backups' ) ) {
 		Easy_Config_Backup::migrate_legacy_db_backups();
+	}
+	if ( method_exists( 'Easy_Config_Backup', 'convert_legacy_plaintext_backups' ) ) {
+		Easy_Config_Backup::convert_legacy_plaintext_backups();
 	}
 
 	// Seed the install timestamp used by the review-request prompt so its
@@ -115,7 +150,7 @@ class Easy_PHP_Settings {
 	/**
 	 * @var string
 	 */
-	private $version = '1.1.7';
+	private $version = '1.1.8';
 
 	/**
 	 * @var array
@@ -138,7 +173,6 @@ class Easy_PHP_Settings {
 		$loader->load_all_modules();
 		$this->module_manager->load_modules();
 
-		add_action( 'init', array( $this, 'load_textdomain' ), 5 );
 		add_action( 'init', array( $this, 'init_tooltips' ), 10 );
 		add_action( 'init', array( $this, 'init_presets' ), 10 );
 
@@ -236,14 +270,6 @@ class Easy_PHP_Settings {
 	/* ──────────────────────────────────────────────
 	   Bootstrap helpers
 	   ────────────────────────────────────────────── */
-
-	public function load_textdomain() {
-		load_plugin_textdomain(
-			'easy-php-settings',
-			false,
-			dirname( plugin_basename( __FILE__ ) ) . '/languages'
-		);
-	}
 
 	public function init_tooltips() {
 		$this->setting_tooltips = array(
@@ -379,6 +405,7 @@ class Easy_PHP_Settings {
 		// Tab navigation is read-only: no nonce needed (a nonce would only
 		// add UX friction since they expire after ~24h, and nonces are not
 		// an authorization mechanism). Whitelist against known tab IDs.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only tab switch, sanitized against known IDs.
 		$active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general_settings';
 		if ( ! isset( $ordered_tabs[ $active_tab ] ) ) {
 			$active_tab = 'general_settings';

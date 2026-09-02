@@ -3,6 +3,8 @@
 .github
 .gitignore
 .gitattributes
+.claude
+.cursor
 
 # WordPress.org assets (deployed separately to SVN assets/)
 .wordpress-org
@@ -39,6 +41,7 @@ bin
 # Documentation (keep readme.txt for WP.org)
 *.md
 !readme.txt
+!legal/plugin-tracker-terms.md
 CHANGELOG.md
 DEPLOYMENT.md
 

@@ -208,7 +208,11 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 			add_settings_error(
 				'easy_php_settings_settings',
 				'config_files_created',
-				sprintf( __( 'Settings saved and written to: %s. Please restart your web server for changes to take effect.', 'easy-php-settings' ), implode( ', ', $result ) ),
+				sprintf(
+					/* translators: %s: comma-separated list of written file names */
+					__( 'Settings saved and written to: %s. Please restart your web server for changes to take effect.', 'easy-php-settings' ),
+					implode( ', ', $result )
+				),
 				'updated'
 			);
 		} else {
@@ -244,7 +248,7 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 			if ( INI_USER !== $access && INI_ALL !== $access ) {
 				continue;
 			}
-			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.PHP.IniSet.Risky
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.PHP.IniSet.Risky, Squiz.PHP.DiscouragedFunctions.Discouraged -- applying administrator-configured INI values is this plugin's purpose.
 			@ini_set( $key, $sanitized );
 		}
 	}
@@ -271,7 +275,7 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 
 		$config_content = $wp_filesystem->get_contents( $config_path );
 		if ( false === $config_content ) {
-			throw new Exception( __( 'Failed to read wp-config.php file.', 'easy-php-settings' ) );
+			throw new Exception( esc_html__( 'Failed to read wp-config.php file.', 'easy-php-settings' ) );
 		}
 
 		foreach ( array( 'WP_MEMORY_LIMIT', 'WP_MAX_MEMORY_LIMIT' ) as $const ) {
@@ -281,16 +285,24 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 			}
 			$trimmed = trim( $input[ $key ] );
 			if ( ! preg_match( '/^(\d+)([KMGT]?)$/i', $trimmed ) ) {
-				throw new Exception( sprintf( __( 'Invalid value format for %s. Only numbers and K/M/G/T units are allowed.', 'easy-php-settings' ), $const ) );
+				throw new Exception(
+					esc_html(
+						sprintf(
+							/* translators: %s: wp-config.php constant name */
+							__( 'Invalid value format for %s. Only numbers and K/M/G/T units are allowed.', 'easy-php-settings' ),
+							$const
+						)
+					)
+				);
 			}
 			$sanitized  = preg_replace( '/[^0-9KMGT]/i', '', $trimmed );
 			$validation = Easy_Settings_Validator::validate_wp_memory_setting( $key, $sanitized );
 			if ( is_wp_error( $validation ) ) {
-				throw new Exception( $validation->get_error_message() );
+				throw new Exception( esc_html( $validation->get_error_message() ) );
 			}
 			$result = Easy_Config_Parser::update_constant( $config_content, $const, $sanitized, 'string' );
 			if ( is_wp_error( $result ) ) {
-				throw new Exception( $result->get_error_message() );
+				throw new Exception( esc_html( $result->get_error_message() ) );
 			}
 			$config_content = $result;
 		}
@@ -301,7 +313,7 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 			if ( $latest ) {
 				Easy_Config_Backup::restore_backup( $latest['key'] );
 			}
-			throw new Exception( $validation->get_error_message() );
+			throw new Exception( esc_html( $validation->get_error_message() ) );
 		}
 
 		if ( ! $wp_filesystem->put_contents( $config_path, $config_content ) ) {
@@ -309,7 +321,7 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 			if ( $latest ) {
 				Easy_Config_Backup::restore_backup( $latest['key'] );
 			}
-			throw new Exception( __( 'Failed to write wp-config.php file.', 'easy-php-settings' ) );
+			throw new Exception( esc_html__( 'Failed to write wp-config.php file.', 'easy-php-settings' ) );
 		}
 
 		add_settings_error( 'easy_php_settings_wp_memory_settings', 'wp_memory_updated', __( 'WordPress memory settings updated successfully in wp-config.php.', 'easy-php-settings' ), 'updated' );
@@ -331,7 +343,16 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		if ( is_wp_error( $result ) ) {
 			Easy_Error_Handler::add_settings_error( 'easy_php_settings_settings', 'files_deleted_error', $result->get_error_message(), 'error' );
 		} elseif ( ! empty( $result ) && is_array( $result ) ) {
-			add_settings_error( 'easy_php_settings_settings', 'files_deleted_success', sprintf( __( 'Successfully deleted: %s.', 'easy-php-settings' ), implode( ', ', $result ) ), 'success' );
+			add_settings_error(
+				'easy_php_settings_settings',
+				'files_deleted_success',
+				sprintf(
+					/* translators: %s: comma-separated list of deleted file names */
+					__( 'Successfully deleted: %s.', 'easy-php-settings' ),
+					implode( ', ', $result )
+				),
+				'success'
+			);
 		} else {
 			add_settings_error( 'easy_php_settings_settings', 'files_deleted_error', __( 'Could not delete INI files. They may not exist or have permission issues.', 'easy-php-settings' ), 'warning' );
 		}
@@ -362,7 +383,11 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		$tooltip       = isset( $tooltips[ $key ] ) ? $tooltips[ $key ] : '';
 
 		$field_id   = 'easy_php_settings_' . esc_attr( $key );
-		$aria_label = sprintf( __( 'Enter value for %s', 'easy-php-settings' ), esc_attr( $key ) );
+		$aria_label = sprintf(
+			/* translators: %s: PHP setting name */
+			__( 'Enter value for %s', 'easy-php-settings' ),
+			$key
+		);
 
 		$aria_desc = $field_id . '_description';
 		if ( $tooltip ) {
@@ -393,7 +418,11 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		$tooltip       = isset( $tooltips[ $key ] ) ? $tooltips[ $key ] : '';
 
 		$field_id   = 'easy_php_settings_wp_memory_' . esc_attr( $key );
-		$aria_label = sprintf( __( 'Enter value for %s', 'easy-php-settings' ), esc_attr( $key ) );
+		$aria_label = sprintf(
+			/* translators: %s: WordPress memory constant name */
+			__( 'Enter value for %s', 'easy-php-settings' ),
+			$key
+		);
 
 		$aria_desc = $field_id . '_description';
 		if ( $tooltip ) {
@@ -436,11 +465,19 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 
 	private function render_status_indicator( $key, $current_value, $recommended ) {
 		$field_id    = 'easy_php_settings_' . esc_attr( $key );
-		$description = sprintf( esc_html__( 'Current value: %s', 'easy-php-settings' ), esc_html( $current_value ) );
+		$description = sprintf(
+			/* translators: %s: current PHP setting value */
+			esc_html__( 'Current value: %s', 'easy-php-settings' ),
+			esc_html( $current_value )
+		);
 
 		if ( isset( $recommended[ $key ] ) ) {
-			$rec   = $recommended[ $key ];
-			$desc  = sprintf( esc_html__( ' | Recommended: %s', 'easy-php-settings' ), esc_html( $rec ) );
+			$rec  = $recommended[ $key ];
+			$desc = sprintf(
+				/* translators: %s: recommended PHP setting value */
+				esc_html__( ' | Recommended: %s', 'easy-php-settings' ),
+				esc_html( $rec )
+			);
 			$status = $this->get_status_for_value( $key, $current_value, $recommended );
 			if ( 'low' === $status ) {
 				$description .= $desc . ' <span class="status-badge status-low" aria-label="' . esc_attr__( 'Low value', 'easy-php-settings' ) . '">' . esc_html__( 'Low', 'easy-php-settings' ) . '</span>';
@@ -456,11 +493,19 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 
 	private function render_memory_status_indicator( $key, $current_value, $recommended ) {
 		$field_id    = 'easy_php_settings_wp_memory_' . esc_attr( $key );
-		$description = sprintf( esc_html__( 'Current value: %s', 'easy-php-settings' ), esc_html( $current_value ) );
+		$description = sprintf(
+			/* translators: %s: current WordPress memory value */
+			esc_html__( 'Current value: %s', 'easy-php-settings' ),
+			esc_html( $current_value )
+		);
 
 		if ( isset( $recommended[ $key ] ) ) {
-			$rec   = $recommended[ $key ];
-			$desc  = sprintf( esc_html__( ' | Recommended: %s', 'easy-php-settings' ), esc_html( $rec ) );
+			$rec  = $recommended[ $key ];
+			$desc = sprintf(
+				/* translators: %s: recommended WordPress memory value */
+				esc_html__( ' | Recommended: %s', 'easy-php-settings' ),
+				esc_html( $rec )
+			);
 			$status = $this->get_status_for_value( $key, $current_value, $recommended );
 			if ( 'low' === $status ) {
 				$description .= $desc . ' <span class="status-badge status-low" aria-label="' . esc_attr__( 'Low value', 'easy-php-settings' ) . '">' . esc_html__( 'Low', 'easy-php-settings' ) . '</span>';

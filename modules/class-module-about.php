@@ -32,7 +32,7 @@ class Easy_Module_About extends Easy_Module_Base {
 		<div id="about-tab" class="easy-php-about-container">
 			<div class="easy-php-about-header-card">
 				<div class="easy-php-about-avatar">
-					<img src="https://avatars.githubusercontent.com/u/13654267?v=4&size=120" alt="<?php esc_attr_e( 'H M Shahadul Islam', 'easy-php-settings' ); ?>" width="120" height="120">
+					<img src="<?php echo esc_url( plugin_dir_url( dirname( __FILE__ ) ) . 'images/author-avatar.svg' ); ?>" alt="<?php esc_attr_e( 'H M Shahadul Islam', 'easy-php-settings' ); ?>" width="120" height="120">
 				</div>
 				<div class="easy-php-about-info">
 					<h2 class="easy-php-about-name"><?php esc_html_e( 'H M Shahadul Islam', 'easy-php-settings' ); ?></h2>

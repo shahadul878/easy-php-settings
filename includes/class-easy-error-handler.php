@@ -84,6 +84,7 @@ class Easy_Error_Handler {
 			if ( ! empty( $context ) ) {
 				$log_message .= ' Context: ' . $context;
 			}
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- gated behind WP_DEBUG and WP_DEBUG_LOG.
 			error_log( $log_message );
 		}
 	}

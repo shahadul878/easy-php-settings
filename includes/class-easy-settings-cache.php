@@ -93,6 +93,7 @@ class Easy_Settings_Cache {
 		global $wpdb;
 
 		$pattern = $wpdb->esc_like( '_transient_' . self::CACHE_PREFIX ) . '%';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bulk transient prefix cleanup.
 		$wpdb->query(
 			$wpdb->prepare(
 				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
@@ -100,8 +101,8 @@ class Easy_Settings_Cache {
 			)
 		);
 
-		// Also delete timeout entries.
 		$pattern = $wpdb->esc_like( '_transient_timeout_' . self::CACHE_PREFIX ) . '%';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bulk transient timeout prefix cleanup.
 		$wpdb->query(
 			$wpdb->prepare(
 				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
@@ -109,9 +110,9 @@ class Easy_Settings_Cache {
 			)
 		);
 
-		// For multisite.
 		if ( is_multisite() ) {
 			$pattern = $wpdb->esc_like( '_site_transient_' . self::CACHE_PREFIX ) . '%';
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bulk site transient prefix cleanup.
 			$wpdb->query(
 				$wpdb->prepare(
 					"DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s",
@@ -120,6 +121,7 @@ class Easy_Settings_Cache {
 			);
 
 			$pattern = $wpdb->esc_like( '_site_transient_timeout_' . self::CACHE_PREFIX ) . '%';
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- bulk site transient timeout prefix cleanup.
 			$wpdb->query(
 				$wpdb->prepare(
 					"DELETE FROM {$wpdb->sitemeta} WHERE meta_key LIKE %s",

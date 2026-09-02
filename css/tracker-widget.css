@@ -1,0 +1,118 @@
+/**
+ * Scoped dashboard widget styles for Easy PHP Settings.
+ * Loaded only on the Dashboard (index.php) for the plugin widget.
+ */
+
+#plugin_tracker_offers_widget .inside {
+  margin: 0;
+  padding: 0;
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  padding: 12px;
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-card {
+  overflow: hidden;
+  border: 1px solid #dcdcde;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-media {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: #f0f0f1;
+  text-decoration: none;
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-media--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-media--placeholder .dashicons {
+  width: 42px;
+  height: 42px;
+  font-size: 42px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-media--speed {
+  background: linear-gradient(135deg, #2271b1 0%, #72aee6 100%);
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-media--security {
+  background: linear-gradient(135deg, #008a20 0%, #68de7c 100%);
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-media--website {
+  background: linear-gradient(135deg, #7c3aed 0%, #c084fc 100%);
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-media--default {
+  background: linear-gradient(135deg, #50575e 0%, #a7aaad 100%);
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-body {
+  padding: 12px 14px 14px;
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-title a {
+  color: #1d2327;
+  text-decoration: none;
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-title a:hover,
+#plugin_tracker_offers_widget .eps-tracker-offer-title a:focus {
+  color: #2271b1;
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-excerpt {
+  margin: 0 0 10px;
+  color: #50575e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #2271b1;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-link:hover,
+#plugin_tracker_offers_widget .eps-tracker-offer-link:focus {
+  color: #135e96;
+}
+
+#plugin_tracker_offers_widget .eps-tracker-offer-link .dashicons {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}

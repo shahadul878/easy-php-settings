@@ -3,8 +3,8 @@ Plugin Name: Easy PHP Settings
 Contributors: shahadul878,codereyes
 Tags: php settings, ini, performance, debug, wp-config
 Requires at least: 5.0
-Tested up to: 7.0
-Stable tag: 1.1.7
+Tested up to: 7.1
+Stable tag: 1.1.8
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -135,6 +135,10 @@ This plugin can optionally send site information to a third-party service when a
 
 **Third-party service:** Plugin Tracker (CodeEyes) — https://plugin.codereyes.com/
 
+**Privacy Policy:** https://codereyes.com/privacy-policy/
+
+**Terms of Service:** https://github.com/shahadul878/easy-php-settings/blob/master/legal/plugin-tracker-terms.md
+
 **Data that may be sent after opt-in:**
 * Site URL
 * WordPress, PHP, and Easy PHP Settings plugin versions
@@ -150,7 +154,31 @@ This plugin can optionally send site information to a third-party service when a
 
 **No data before opt-in:** Activating or using Easy PHP Settings does not send any information to plugin.codereyes.com until you explicitly allow it.
 
+== External services ==
+
+Easy PHP Settings can optionally connect to **Plugin Tracker**, a service operated by CodeEyes at https://plugin.codereyes.com/. This is used only after an administrator opts in from Tools → Easy PHP Settings → About. The plugin works fully without this connection.
+
+**What the service is used for:** Plugin support, compatibility insight, and optional service offers related to Easy PHP Settings.
+
+**What data is sent and when:** After opt-in, the plugin may send the site URL; WordPress, PHP, and plugin versions; server software; the administrator email address and display name; and installed plugins and themes (name, version, active status). Data may be sent once on opt-in, at most once per week on a schedule, at most once per hour during wp-admin use, after plugin updates, and once on deactivation if you had opted in.
+
+**Terms of Service:** https://github.com/shahadul878/easy-php-settings/blob/master/legal/plugin-tracker-terms.md
+
+**Privacy Policy:** https://codereyes.com/privacy-policy/
+
 == Changelog ==
+
+= 1.1.8 =
+Released: September 2, 2026
+
+* Fixed: Admin CSS is scoped to the plugin screen and no longer restyles core Dashboard buttons or tables.
+* Fixed: Plugin Check errors — translators comments, escaped exception messages, filesystem APIs, and Tested up to 7.1.
+* Fixed: Dashboard widget and admin notices load only their own stylesheets, not the full plugin admin CSS.
+* Fixed: About tab author image is a local asset (no GitHub avatar request).
+* Fixed: Review link points to the full reviews page instead of a 5-star filtered view.
+* Fixed: Plugin URI now points to the public GitHub repository.
+* Fixed: wp-config.php backups are stored as non-executable ZIP archives in the uploads directory.
+* Added: Plugin Tracker Terms of Service and Privacy Policy links in the readme and opt-in UI.
 
 = 1.1.7 =
 Released: August 30, 2026
@@ -271,6 +299,9 @@ Released: March 5, 2026
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.1.8 =
+WordPress.org review fixes: scoped admin CSS, local About avatar, unfiltered review URL, Plugin Tracker terms/privacy links, and ZIP (not plaintext PHP) wp-config backups.
 
 = 1.1.7 =
 Restores WordPress.org compliance: optional data sharing with plugin.codereyes.com is disabled by default and requires explicit administrator opt-in. No outbound tracker requests until you allow it from the About tab.

@@ -2,16 +2,13 @@
 /**
  * Config Backup class for easy-php-settings plugin.
  *
- * Backups are stored on the filesystem under
+ * Backups are stored as non-executable ZIP archives under
  *   wp-content/uploads/easy-php-settings-backups/
  * with .htaccess deny + index.php silence + 0640 perms.
  *
- * Storing wp-config.php content in the database (alongside DB credentials
- * and salts) is a footgun: any SQL injection or option-read leak in any
- * plugin would exfiltrate the secrets twice over. Filesystem backups stay
- * outside the web-readable scope as long as Apache honours the .htaccess
- * (and most modern hosts do; nginx hosts that don't run htaccess should
- * already block uploads/*.php execution at the server-block level).
+ * wp-config.php source is never written as a plaintext/executable PHP file.
+ * The archive contains wp-config.txt (PHP source stored as a non-executable
+ * text entry). Legacy .bak files, if present, can still be restored.
  *
  * @package EasyPHPSettings
  * @since   1.1.5
@@ -25,6 +22,7 @@ class Easy_Config_Backup {
 
 	const BACKUP_DIR_NAME = 'easy-php-settings-backups';
 	const MAX_BACKUPS     = 5;
+	const INNER_FILE      = 'wp-config.txt';
 
 	/**
 	 * Constructor (static-only utility).
@@ -47,7 +45,6 @@ class Easy_Config_Backup {
 			return new WP_Error( 'backup_dir_create_failed', __( 'Could not create backup directory.', 'easy-php-settings' ) );
 		}
 
-		// Drop in protective files (idempotent).
 		$htaccess = trailingslashit( $base ) . '.htaccess';
 		if ( ! file_exists( $htaccess ) ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
@@ -67,7 +64,7 @@ class Easy_Config_Backup {
 	}
 
 	/**
-	 * Create a backup of wp-config.php.
+	 * Create a ZIP backup of wp-config.php.
 	 *
 	 * @return string|WP_Error Backup file basename on success, WP_Error on failure.
 	 */
@@ -96,23 +93,12 @@ class Easy_Config_Backup {
 			return $dir;
 		}
 
-		// Build backup file: wp-config.<unix-ts>.<random>.bak
-		// Random suffix avoids same-second collisions and makes guessing harder.
-		$basename = sprintf( 'wp-config.%d.%s.bak', time(), wp_generate_password( 8, false, false ) );
+		$basename = sprintf( 'wp-config.%d.%s.zip', time(), wp_generate_password( 8, false, false ) );
 		$path     = trailingslashit( $dir ) . $basename;
 
-		$header = sprintf(
-			"; Easy PHP Settings backup\n; Created: %s\n; By user: %d\n\n",
-			gmdate( 'c' ),
-			get_current_user_id()
-		);
-
-		// Use direct file_put_contents — wp_filesystem path may not be
-		// available in cron contexts where wp-config writes happen.
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		$bytes = file_put_contents( $path, $header . $config_content, LOCK_EX );
-		if ( false === $bytes ) {
-			return new WP_Error( 'backup_save_failed', __( 'Failed to save backup.', 'easy-php-settings' ) );
+		$written = self::write_zip_archive( $path, $config_content );
+		if ( is_wp_error( $written ) ) {
+			return $written;
 		}
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
@@ -141,9 +127,8 @@ class Easy_Config_Backup {
 			return $dir;
 		}
 
-		// Path containment: backup_key must be a basename, no traversal.
 		$basename = basename( (string) $backup_key );
-		if ( ! preg_match( '/^wp-config\.\d+\.[a-z0-9]+\.bak$/i', $basename ) ) {
+		if ( ! preg_match( '/^wp-config\.\d+\.[a-z0-9]+\.(zip|bak)$/i', $basename ) ) {
 			return new WP_Error( 'invalid_backup_key', __( 'Invalid backup identifier.', 'easy-php-settings' ) );
 		}
 		$path = trailingslashit( $dir ) . $basename;
@@ -151,14 +136,10 @@ class Easy_Config_Backup {
 			return new WP_Error( 'backup_not_found', __( 'Backup not found.', 'easy-php-settings' ) );
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_get_contents
-		$content = file_get_contents( $path );
-		if ( false === $content ) {
-			return new WP_Error( 'backup_read_failed', __( 'Failed to read backup.', 'easy-php-settings' ) );
+		$content = self::read_backup_contents( $path, $basename );
+		if ( is_wp_error( $content ) ) {
+			return $content;
 		}
-
-		// Strip the backup header (everything up to first blank line).
-		$content = preg_replace( '/\A(?:;.*\n)+\n/', '', $content, 1 );
 
 		$config_path = ABSPATH . 'wp-config.php';
 		if ( $wp_filesystem && $wp_filesystem->is_writable( $config_path ) ) {
@@ -168,7 +149,7 @@ class Easy_Config_Backup {
 			return true;
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		// phpcs:ignore PluginCheck.CodeAnalysis.WriteFile.ABSPATHDetected, WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- restoring wp-config.php is the purpose of this method.
 		if ( false === file_put_contents( $config_path, $content, LOCK_EX ) ) {
 			return new WP_Error( 'restore_failed', __( 'Failed to restore backup.', 'easy-php-settings' ) );
 		}
@@ -200,13 +181,16 @@ class Easy_Config_Backup {
 			return array();
 		}
 
-		$files = glob( trailingslashit( $dir ) . 'wp-config.*.bak' );
-		if ( ! is_array( $files ) ) {
-			return array();
-		}
+		$files = array_merge(
+			(array) glob( trailingslashit( $dir ) . 'wp-config.*.zip' ),
+			(array) glob( trailingslashit( $dir ) . 'wp-config.*.bak' )
+		);
 
 		$entries = array();
 		foreach ( $files as $file ) {
+			if ( ! is_string( $file ) || ! is_file( $file ) ) {
+				continue;
+			}
 			$mtime     = (int) filemtime( $file );
 			$entries[] = array(
 				'key'       => basename( $file ),
@@ -244,8 +228,7 @@ class Easy_Config_Backup {
 		foreach ( $old as $entry ) {
 			$path = trailingslashit( $dir ) . $entry['key'];
 			if ( file_exists( $path ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_unlink
-				@unlink( $path );
+				wp_delete_file( $path );
 			}
 		}
 	}
@@ -273,7 +256,7 @@ class Easy_Config_Backup {
 	}
 
 	/**
-	 * Migrate any legacy DB-stored backups to the filesystem and delete
+	 * Migrate any legacy DB-stored backups to ZIP archives and delete
 	 * the option rows. Idempotent. Best-effort.
 	 *
 	 * @return void
@@ -282,8 +265,8 @@ class Easy_Config_Backup {
 		global $wpdb;
 
 		$prefix = 'easy_php_settings_config_backup_';
-		// Multisite + single-site share the same option names today.
-		$opts = $wpdb->get_results(
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-time migration of legacy backup options.
+		$opts   = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE %s",
 				$wpdb->esc_like( $prefix ) . '%'
@@ -303,21 +286,154 @@ class Easy_Config_Backup {
 		foreach ( $opts as $row ) {
 			$data = maybe_unserialize( $row['option_value'] );
 			if ( is_array( $data ) && isset( $data['content'] ) ) {
-				$basename = sprintf( 'wp-config.%d.%s.bak', time(), wp_generate_password( 8, false, false ) );
+				$basename = sprintf( 'wp-config.%d.%s.zip', time(), wp_generate_password( 8, false, false ) );
 				$path     = trailingslashit( $dir ) . $basename;
-				$header   = sprintf(
-					"; Migrated from DB backup\n; Original timestamp: %s\n\n",
-					isset( $data['timestamp'] ) ? $data['timestamp'] : 'unknown'
-				);
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-				file_put_contents( $path, $header . $data['content'], LOCK_EX );
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
-				@chmod( $path, 0640 );
+				$written  = self::write_zip_archive( $path, (string) $data['content'] );
+				if ( ! is_wp_error( $written ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
+					@chmod( $path, 0640 );
+				}
 			}
 			delete_option( $row['option_name'] );
 			if ( is_multisite() ) {
 				delete_site_option( $row['option_name'] );
 			}
 		}
+	}
+
+	/**
+	 * Write a ZIP archive containing wp-config source as a .txt entry.
+	 *
+	 * @param string $path    Absolute path of the .zip file to create.
+	 * @param string $content wp-config.php source.
+	 * @return true|WP_Error
+	 */
+	private static function write_zip_archive( $path, $content ) {
+		if ( class_exists( 'ZipArchive' ) ) {
+			$zip    = new ZipArchive();
+			$opened = $zip->open( $path, ZipArchive::CREATE | ZipArchive::OVERWRITE );
+			if ( true === $opened ) {
+				$zip->addFromString( self::INNER_FILE, $content );
+				$zip->close();
+				if ( file_exists( $path ) && filesize( $path ) > 0 ) {
+					return true;
+				}
+			}
+		}
+
+		if ( ! class_exists( 'PclZip' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/class-pclzip.php';
+		}
+
+		if ( ! class_exists( 'PclZip' ) ) {
+			return new WP_Error( 'backup_zip_unavailable', __( 'Could not create a ZIP backup. Enable the PHP zip extension or ensure WordPress PclZip is available.', 'easy-php-settings' ) );
+		}
+
+		$archive = new PclZip( $path );
+		$result  = $archive->create(
+			array(
+				array(
+					PCLZIP_ATT_FILE_NAME    => self::INNER_FILE,
+					PCLZIP_ATT_FILE_CONTENT => $content,
+				),
+			)
+		);
+
+		if ( 0 === $result ) {
+			return new WP_Error( 'backup_save_failed', __( 'Failed to save backup.', 'easy-php-settings' ) );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Convert leftover plaintext .bak backups into ZIP archives.
+	 *
+	 * @return void
+	 */
+	public static function convert_legacy_plaintext_backups() {
+		$dir = self::get_backup_dir();
+		if ( is_wp_error( $dir ) ) {
+			return;
+		}
+
+		$files = glob( trailingslashit( $dir ) . 'wp-config.*.bak' );
+		if ( ! is_array( $files ) ) {
+			return;
+		}
+
+		foreach ( $files as $file ) {
+			if ( ! is_file( $file ) ) {
+				continue;
+			}
+			$basename = basename( $file );
+			$content  = self::read_backup_contents( $file, $basename );
+			if ( is_wp_error( $content ) || '' === $content ) {
+				continue;
+			}
+			$zip_name = preg_replace( '/\.bak$/i', '.zip', $basename );
+			$zip_path = trailingslashit( $dir ) . $zip_name;
+			$written  = self::write_zip_archive( $zip_path, $content );
+			if ( is_wp_error( $written ) ) {
+				continue;
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
+			@chmod( $zip_path, 0640 );
+			wp_delete_file( $file );
+		}
+	}
+
+	/**
+	 * Read wp-config source from a ZIP archive or a legacy plaintext .bak file.
+	 *
+	 * @param string $path     Absolute path.
+	 * @param string $basename File basename (used to detect format).
+	 * @return string|WP_Error
+	 */
+	private static function read_backup_contents( $path, $basename ) {
+		if ( preg_match( '/\.bak$/i', $basename ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_get_contents
+			$content = file_get_contents( $path );
+			if ( false === $content ) {
+				return new WP_Error( 'backup_read_failed', __( 'Failed to read backup.', 'easy-php-settings' ) );
+			}
+			return preg_replace( '/\A(?:;.*\n)+\n/', '', $content, 1 );
+		}
+
+		if ( class_exists( 'ZipArchive' ) ) {
+			$zip = new ZipArchive();
+			if ( true === $zip->open( $path ) ) {
+				$content = $zip->getFromName( self::INNER_FILE );
+				if ( false === $content ) {
+					$content = $zip->getFromName( 'wp-config.php' );
+				}
+				$zip->close();
+				if ( false !== $content && '' !== $content ) {
+					return $content;
+				}
+			}
+		}
+
+		if ( ! class_exists( 'PclZip' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/class-pclzip.php';
+		}
+
+		if ( class_exists( 'PclZip' ) ) {
+			$archive = new PclZip( $path );
+			$list    = $archive->extract( PCLZIP_OPT_EXTRACT_AS_STRING );
+			if ( is_array( $list ) ) {
+				foreach ( $list as $entry ) {
+					$name = isset( $entry['filename'] ) ? $entry['filename'] : '';
+					if ( in_array( $name, array( self::INNER_FILE, 'wp-config.php' ), true ) && ! empty( $entry['content'] ) ) {
+						return $entry['content'];
+					}
+				}
+				if ( isset( $list[0]['content'] ) && '' !== $list[0]['content'] ) {
+					return $list[0]['content'];
+				}
+			}
+		}
+
+		return new WP_Error( 'backup_read_failed', __( 'Failed to read backup.', 'easy-php-settings' ) );
 	}
 }

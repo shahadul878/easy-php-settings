@@ -53,7 +53,7 @@ class Easy_Module_Tools extends Easy_Module_Base {
 		header( 'Content-Type: text/plain; charset=utf-8' );
 		header( 'Content-Disposition: attachment; filename="debug-' . gmdate( 'Y-m-d-His' ) . '.log"' );
 		header( 'Content-Length: ' . filesize( $log_file ) );
-		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile -- stream debug.log without loading the whole file into memory.
 		readfile( $log_file );
 		exit;
 	}
@@ -211,15 +211,12 @@ class Easy_Module_Tools extends Easy_Module_Base {
 		$cleared  = false;
 
 		if ( $wp_filesystem->exists( $log_file ) ) {
-			$cleared = $wp_filesystem->is_writable( $log_file )
-				? $wp_filesystem->put_contents( $log_file, '' )
-				: $wp_filesystem->delete( $log_file );
+			$cleared = $wp_filesystem->put_contents( $log_file, '' );
+			if ( false === $cleared ) {
+				$cleared = $wp_filesystem->delete( $log_file );
+			}
 		} else {
 			$cleared = true;
-		}
-
-		if ( ! $cleared && file_exists( $log_file ) && is_writable( $log_file ) ) {
-			$cleared = ( false !== file_put_contents( $log_file, '' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
 		}
 
 		if ( $cleared ) {
@@ -256,15 +253,26 @@ class Easy_Module_Tools extends Easy_Module_Base {
 				wp_die( esc_html__( 'You do not have sufficient permissions to perform this action.', 'easy-php-settings' ), 403 );
 			}
 			check_admin_referer( 'easy_php_settings_import_nonce' );
-			if ( ! isset( $_FILES['import_file'] ) || empty( $_FILES['import_file']['tmp_name'] ) ) {
+			if ( ! isset( $_FILES['import_file'] ) || ! is_array( $_FILES['import_file'] ) || empty( $_FILES['import_file']['tmp_name'] ) ) {
 				Easy_Error_Handler::add_settings_error( 'easy_php_settings_settings', 'import_no_file', __( 'No file selected for import.', 'easy-php-settings' ), 'error' );
 				return;
 			}
 
 			try {
-				$file_validation = Easy_Settings_Validator::validate_import_file( $_FILES['import_file'] );
+				$import_file = array(
+					'name'     => isset( $_FILES['import_file']['name'] ) ? sanitize_file_name( wp_unslash( $_FILES['import_file']['name'] ) ) : '',
+					'type'     => isset( $_FILES['import_file']['type'] ) ? sanitize_mime_type( wp_unslash( $_FILES['import_file']['type'] ) ) : '',
+					'error'    => isset( $_FILES['import_file']['error'] ) ? absint( $_FILES['import_file']['error'] ) : UPLOAD_ERR_NO_FILE,
+					'size'     => isset( $_FILES['import_file']['size'] ) ? absint( $_FILES['import_file']['size'] ) : 0,
+					'tmp_name' => isset( $_FILES['import_file']['tmp_name'] ) ? wp_normalize_path( sanitize_text_field( wp_unslash( $_FILES['import_file']['tmp_name'] ) ) ) : '',
+				);
+				if ( '' === $import_file['tmp_name'] || ! is_uploaded_file( $import_file['tmp_name'] ) ) {
+					throw new Exception( esc_html__( 'Invalid import file.', 'easy-php-settings' ) );
+				}
+
+				$file_validation = Easy_Settings_Validator::validate_import_file( $import_file );
 				if ( is_wp_error( $file_validation ) ) {
-					throw new Exception( $file_validation->get_error_message() );
+					throw new Exception( esc_html( $file_validation->get_error_message() ) );
 				}
 
 				global $wp_filesystem;
@@ -272,7 +280,7 @@ class Easy_Module_Tools extends Easy_Module_Base {
 					require_once ABSPATH . 'wp-admin/includes/file.php';
 					WP_Filesystem();
 				}
-				$json = $wp_filesystem->get_contents( $_FILES['import_file']['tmp_name'] );
+				$json = $wp_filesystem->get_contents( $import_file['tmp_name'] );
 				if ( false === $json ) {
 					throw new Exception( __( 'Failed to read import file.', 'easy-php-settings' ) );
 				}
@@ -294,7 +302,16 @@ class Easy_Module_Tools extends Easy_Module_Base {
 						$sanitized = Easy_Settings_Validator::sanitize_setting( $key, $value );
 						$v         = Easy_Settings_Validator::validate_setting( $key, $sanitized );
 						if ( is_wp_error( $v ) ) {
-							throw new Exception( sprintf( __( 'Invalid value for %s: %s', 'easy-php-settings' ), $key, $v->get_error_message() ) );
+							throw new Exception(
+								esc_html(
+									sprintf(
+										/* translators: 1: setting name, 2: validation error */
+										__( 'Invalid value for %1$s: %2$s', 'easy-php-settings' ),
+										$key,
+										$v->get_error_message()
+									)
+								)
+							);
 						}
 						$clean_php[ $key ] = $sanitized;
 					}
@@ -310,7 +327,16 @@ class Easy_Module_Tools extends Easy_Module_Base {
 						$sanitized = Easy_Settings_Validator::sanitize_setting( $key, $value );
 						$v         = Easy_Settings_Validator::validate_wp_memory_setting( $key, $sanitized );
 						if ( is_wp_error( $v ) ) {
-							throw new Exception( sprintf( __( 'Invalid value for %s: %s', 'easy-php-settings' ), $key, $v->get_error_message() ) );
+							throw new Exception(
+								esc_html(
+									sprintf(
+										/* translators: 1: setting name, 2: validation error */
+										__( 'Invalid value for %1$s: %2$s', 'easy-php-settings' ),
+										$key,
+										$v->get_error_message()
+									)
+								)
+							);
 						}
 						$clean_mem[ $key ] = $sanitized;
 					}
@@ -466,6 +492,7 @@ class Easy_Module_Tools extends Easy_Module_Base {
 			if ( 0 === $total_size ) {
 				echo '<div class="notice notice-info"><p>' . esc_html__( 'The debug log file is empty.', 'easy-php-settings' ) . '</p></div>';
 			} else {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- tail a potentially large debug.log without loading it all.
 				$fp = fopen( $log_file, 'rb' );
 				if ( $fp ) {
 					$start = max( 0, $total_size - $tail_threshold );
@@ -476,6 +503,7 @@ class Easy_Module_Tools extends Easy_Module_Base {
 						$truncated = true;
 					}
 					$log_content = stream_get_contents( $fp );
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 					fclose( $fp );
 				}
 			}
