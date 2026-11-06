@@ -1228,23 +1228,23 @@ function tracker_integration_render_optin_notice() {
 					<strong><?php esc_html_e( 'Easy PHP Settings: optional data sharing', 'easy-php-settings' ); ?></strong>
 					<?php esc_html_e( 'Off by default. If you allow it, the details below are sent to our tracker for plugin support updates and service offers.', 'easy-php-settings' ); ?>
 				</p>
-				<p class="plugin-tracker-optin__fields">
-					<?php esc_html_e( 'Sent if you allow:', 'easy-php-settings' ); ?>
-					<?php echo esc_html( implode( ' · ', $fields ) ); ?>
-				</p>
 				<details class="plugin-tracker-optin__more">
-					<summary><?php esc_html_e( 'When it is sent and how to turn it off', 'easy-php-settings' ); ?></summary>
+					<summary><?php esc_html_e( 'Learn more', 'easy-php-settings' ); ?></summary>
+					<p>
+						<strong><?php esc_html_e( 'Sent if you allow:', 'easy-php-settings' ); ?></strong>
+						<?php echo esc_html( implode( ' · ', $fields ) ); ?>
+					</p>
 					<p><?php esc_html_e( 'When sent: once when you opt in, then at most once per week via a scheduled task, at most once per hour during admin use, after plugin updates, and once on deactivation if you had opted in. Purpose: improve plugin support and related services.', 'easy-php-settings' ); ?></p>
 					<p>
 						<?php esc_html_e( 'You can turn it off at any time under Tools → Easy PHP Settings → About.', 'easy-php-settings' ); ?>
 						<a href="<?php echo esc_url( $about_url ); ?>#plugin-tracker-consent-panel"><?php esc_html_e( 'Open data-sharing settings', 'easy-php-settings' ); ?></a>
 					</p>
+					<p class="plugin-tracker-optin__links">
+						<a href="<?php echo esc_url( PLUGIN_TRACKER_PRIVACY_URL ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Privacy Policy', 'easy-php-settings' ); ?></a>
+						<span aria-hidden="true">·</span>
+						<a href="<?php echo esc_url( PLUGIN_TRACKER_TERMS_URL ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Terms of Service', 'easy-php-settings' ); ?></a>
+					</p>
 				</details>
-				<p class="plugin-tracker-optin__links">
-					<a href="<?php echo esc_url( PLUGIN_TRACKER_PRIVACY_URL ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Privacy Policy', 'easy-php-settings' ); ?></a>
-					<span aria-hidden="true">·</span>
-					<a href="<?php echo esc_url( PLUGIN_TRACKER_TERMS_URL ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Terms of Service', 'easy-php-settings' ); ?></a>
-				</p>
 			</div>
 			<div class="plugin-tracker-optin__actions">
 				<form method="post" action="">

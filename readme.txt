@@ -140,7 +140,7 @@ These switches directly control the debugging constants in your `wp-config.php` 
 3. PHP Settings — Full table of all PHP directives with search and copy functionality.
 4. Extensions — View all loaded PHP extensions by category with missing extension alerts.
 5. Status — Live comparison of current vs. recommended PHP and WordPress memory values.
-6. About — Plugin information, privacy & data sharing controls, author details, and support links.
+6. About — Author profile with skills, services and a Hire me button, plus plugin details and privacy & data sharing controls.
 
 == Privacy Policy ==
 
@@ -190,6 +190,9 @@ Unreleased
 * Changed: Each PHP and WordPress memory setting now shows the value in use, how it compares to the recommendation, and whether your saved value has taken effect (with manual snippets when it has not).
 * Changed: Presets are clickable cards that fill the form without leaving the page; changed fields are highlighted and a save bar counts unsaved changes and warns before you leave the page.
 * Changed: Debugging switches now explain what each constant does.
+* Changed: The About tab is laid out as a CV (profile, skills, services, selected work) with "Hire me" buttons that open an email.
+* Changed: Admin notices, including the data-sharing notice, appear above the plugin header.
+* Changed: The review request no longer pops up on every admin page after 7 days. It appears on the General tab only when the plugin's live check confirms your saved PHP settings are in use, and "Not now" waits 30 days.
 * Changed: The optional data-sharing notice is now compact. What is sent, the service, and the Privacy Policy and Terms links stay visible; timing details are one click away.
 * Fixed: Choosing a preset now updates the custom php.ini editor; before, the editor kept its old text and saved over the preset.
 * Fixed: The Status tab's "Changeable" column said "No" for upload_max_filesize, post_max_size and max_input_vars even on servers where the plugin sets them through .user.ini. It is now "How to change it": this plugin (.user.ini), .htaccess (Apache module), or host only.

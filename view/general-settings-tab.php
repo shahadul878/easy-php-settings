@@ -116,6 +116,11 @@ $easy_php_settings_render_rows = function ( array $rows, $is_php ) {
 				</button>
 			</div>
 		</div>
+		<?php
+		if ( $view['review'] ) {
+			$view['review']->render_inline_prompt();
+		}
+		?>
 		<div class="eps-blocked" role="status" hidden>
 			<p class="eps-blocked__title"></p>
 			<ul class="eps-blocked__list"></ul>

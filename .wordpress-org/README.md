@@ -33,7 +33,7 @@ Screenshots correspond to the `== Screenshots ==` section in `readme.txt`. They 
 | `screenshot-3.png` | PHP Settings | Full table of all PHP directives with search and copy |
 | `screenshot-4.png` | Extensions | Loaded PHP extensions by category with missing extension alerts |
 | `screenshot-5.png` | Status | Live comparison of current vs. recommended PHP and WP memory values |
-| `screenshot-6.png` | About | Plugin information, author details, and support links |
+| `screenshot-6.png` | About | Author CV with Hire me button, plugin details, privacy controls |
 
 ---
 

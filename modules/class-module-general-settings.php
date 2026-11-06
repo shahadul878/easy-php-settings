@@ -521,6 +521,7 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 			),
 			'custom_ini' => is_array( $options ) && isset( $options['custom_php_ini'] ) ? (string) $options['custom_php_ini'] : '',
 			'cache_ttl'  => (int) ini_get( 'user_ini.cache_ttl' ),
+			'review'     => $this->plugin->get_module_manager()->get_module( 'review_request' ),
 		);
 
 		include plugin_dir_path( dirname( __FILE__ ) ) . 'view/general-settings-tab.php';

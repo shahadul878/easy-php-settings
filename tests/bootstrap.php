@@ -20,3 +20,5 @@ require_once dirname( __DIR__ ) . '/includes/class-easy-site-health.php';
 require_once dirname( __DIR__ ) . '/includes/class-easy-live-check.php';
 require_once dirname( __DIR__ ) . '/includes/class-easy-upload-hint.php';
 require_once dirname( __DIR__ ) . '/includes/class-easy-debug-log-parser.php';
+require_once dirname( __DIR__ ) . '/includes/class-easy-module-base.php';
+require_once dirname( __DIR__ ) . '/modules/class-module-review-request.php';

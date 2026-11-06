@@ -226,6 +226,22 @@
 		box.querySelector( '.eps-blocked__request' ).value = data.host_request || '';
 	}
 
+	/**
+	 * Show the review request only once the plugin has visibly helped: at least
+	 * one saved value is in use and nothing is being blocked by the host.
+	 */
+	function maybeAskForReview( data ) {
+		var prompt = document.getElementById( 'easy-php-settings-review-notice' );
+		var settings = data.settings || {};
+		if ( ! prompt ) {
+			return;
+		}
+		var helped = Object.keys( settings ).some( function ( key ) {
+			return 'applied' === settings[ key ].applied;
+		} );
+		prompt.hidden = ! helped || ( data.blocked || [] ).length > 0;
+	}
+
 	function runLiveCheck() {
 		if ( ! liveCheck || ! vars.liveCheck || ! window.fetch ) {
 			return;
@@ -246,6 +262,7 @@
 			.then( function ( data ) {
 				applyLiveStates( data.settings || {} );
 				showBlocked( data );
+				maybeAskForReview( data );
 				liveStatus.textContent = format( i18n.checkedAt || 'Checked at %s', [ new Date().toLocaleTimeString() ] );
 			} )
 			.catch( function () {

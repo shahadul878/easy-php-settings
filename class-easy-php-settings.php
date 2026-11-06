@@ -377,6 +377,7 @@ class Easy_PHP_Settings {
 		wp_enqueue_style( 'easy-php-settings-theme', plugin_dir_url( __FILE__ ) . 'css/admin-theme.css', array( 'easy-php-settings-styles' ), $this->version );
 		wp_enqueue_style( 'easy-php-settings-theme-components', plugin_dir_url( __FILE__ ) . 'css/admin-theme-components.css', array( 'easy-php-settings-theme' ), $this->version );
 		wp_enqueue_style( 'easy-php-settings-log-viewer', plugin_dir_url( __FILE__ ) . 'css/admin-log-viewer.css', array( 'easy-php-settings-theme' ), $this->version );
+		wp_enqueue_style( 'easy-php-settings-about', plugin_dir_url( __FILE__ ) . 'css/admin-about.css', array( 'easy-php-settings-theme' ), $this->version );
 
 		wp_enqueue_script( 'easy-php-settings-admin', plugin_dir_url( __FILE__ ) . 'js/admin.js', array( 'jquery' ), $this->version, true );
 		wp_enqueue_script( 'easy-php-settings-general', plugin_dir_url( __FILE__ ) . 'js/general-settings.js', array( 'easy-php-settings-admin' ), $this->version, true );
@@ -524,6 +525,8 @@ class Easy_PHP_Settings {
 		);
 		?>
 		<div class="wrap easy-php-settings-app">
+			<?php // WordPress moves admin notices to just after this marker, so they sit above the header. ?>
+			<hr class="wp-header-end">
 			<header class="eps-header">
 				<div class="eps-header__top">
 					<div class="eps-header__brand">
@@ -557,7 +560,6 @@ class Easy_PHP_Settings {
 					<?php endforeach; ?>
 				</nav>
 			</header>
-			<hr class="wp-header-end">
 
 			<?php settings_errors(); ?>
 
