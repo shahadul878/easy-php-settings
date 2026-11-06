@@ -18,6 +18,16 @@ class Easy_Module_Tools extends Easy_Module_Base {
 	protected $module_name        = 'Tools';
 	protected $module_description = 'Debugging settings, log viewer, export/import, and reset tools';
 
+	/**
+	 * How much of the end of debug.log to read.
+	 */
+	const LOG_TAIL_BYTES = 262144;
+
+	/**
+	 * Most distinct errors to list in the viewer.
+	 */
+	const LOG_MAX_GROUPS = 200;
+
 	/* ─── Hooks ───────────────────────────────── */
 
 	public function register_hooks() {
@@ -532,7 +542,7 @@ class Easy_Module_Tools extends Easy_Module_Base {
 		$log_file       = WP_CONTENT_DIR . '/debug.log';
 		$log_content    = '';
 		$total_size     = 0;
-		$tail_threshold = 65536; // 64 KB.
+		$tail_threshold = self::LOG_TAIL_BYTES;
 		$truncated      = false;
 
 		if ( $wp_filesystem->exists( $log_file ) && $wp_filesystem->is_readable( $log_file ) ) {
@@ -582,8 +592,9 @@ class Easy_Module_Tools extends Easy_Module_Base {
 					if ( $truncated ) {
 						echo esc_html(
 							sprintf(
-								/* translators: %s: file size */
-								__( 'Showing last 64 KB of %s', 'easy-php-settings' ),
+								/* translators: 1: amount read, 2: file size */
+								__( 'Reading the last %1$s of %2$s', 'easy-php-settings' ),
+								size_format( self::LOG_TAIL_BYTES ),
 								size_format( $total_size )
 							)
 						);
@@ -594,7 +605,13 @@ class Easy_Module_Tools extends Easy_Module_Base {
 				</span>
 			<?php endif; ?>
 		</form>
-		<textarea id="easy_php_settings-log-viewer" rows="18" readonly><?php echo esc_textarea( $log_content ); ?></textarea>
 		<?php
+		if ( '' === $log_content ) {
+			return;
+		}
+		$groups     = Easy_Debug_Log_Parser::group( Easy_Debug_Log_Parser::parse( $log_content ) );
+		$counts     = Easy_Debug_Log_Parser::count_by_level( $groups );
+		$max_groups = self::LOG_MAX_GROUPS;
+		include plugin_dir_path( dirname( __FILE__ ) ) . 'view/partials/log-viewer.php';
 	}
 }

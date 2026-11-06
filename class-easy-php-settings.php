@@ -61,6 +61,12 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-error-handler.ph
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-settings-validator.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-settings-cache.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-ini-change-method.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-limit-health.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-live-check.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-site-health.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-rest-api.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-upload-hint.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-debug-log-parser.php';
 
 // Module system.
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-module-base.php';
@@ -168,7 +174,18 @@ class Easy_PHP_Settings {
 	 */
 	private $module_manager;
 
+	/**
+	 * @var Easy_Live_Check
+	 */
+	private $live_check;
+
 	public function __construct() {
+		$this->live_check = new Easy_Live_Check( $this );
+		$site_health      = new Easy_Site_Health( $this->live_check );
+		$site_health->register_hooks();
+		( new Easy_Rest_Api( $this, $site_health ) )->register_hooks();
+		( new Easy_Upload_Hint( $this ) )->register_hooks();
+
 		$this->module_manager = new Easy_Module_Manager( $this );
 		$loader = new Easy_Module_Loader( $this->module_manager );
 		$loader->load_all_modules();
@@ -192,6 +209,10 @@ class Easy_PHP_Settings {
 
 	public function get_module_manager() {
 		return $this->module_manager;
+	}
+
+	public function get_live_check() {
+		return $this->live_check;
 	}
 
 	public function get_settings_keys() {
@@ -355,15 +376,21 @@ class Easy_PHP_Settings {
 		wp_enqueue_style( 'easy-php-settings-styles', plugin_dir_url( __FILE__ ) . 'css/admin-styles.css', array(), $this->version );
 		wp_enqueue_style( 'easy-php-settings-theme', plugin_dir_url( __FILE__ ) . 'css/admin-theme.css', array( 'easy-php-settings-styles' ), $this->version );
 		wp_enqueue_style( 'easy-php-settings-theme-components', plugin_dir_url( __FILE__ ) . 'css/admin-theme-components.css', array( 'easy-php-settings-theme' ), $this->version );
+		wp_enqueue_style( 'easy-php-settings-log-viewer', plugin_dir_url( __FILE__ ) . 'css/admin-log-viewer.css', array( 'easy-php-settings-theme' ), $this->version );
 
 		wp_enqueue_script( 'easy-php-settings-admin', plugin_dir_url( __FILE__ ) . 'js/admin.js', array( 'jquery' ), $this->version, true );
 		wp_enqueue_script( 'easy-php-settings-general', plugin_dir_url( __FILE__ ) . 'js/general-settings.js', array( 'easy-php-settings-admin' ), $this->version, true );
+		wp_enqueue_script( 'easy-php-settings-log-viewer', plugin_dir_url( __FILE__ ) . 'js/log-viewer.js', array(), $this->version, true );
 		wp_localize_script( 'easy-php-settings-admin', 'easy_php_settingsKeys', $this->settings_keys );
 		wp_localize_script(
 			'easy-php-settings-admin',
 			'easy_php_settingsAdminVars',
 			array(
 				'copiedText'     => esc_html__( 'Copied to clipboard!', 'easy-php-settings' ),
+				'liveCheck'      => array(
+					'url'   => rest_url( Easy_Rest_Api::NAMESPACE_V1 . '/live-check' ),
+					'nonce' => wp_create_nonce( 'wp_rest' ),
+				),
 				'i18n'           => array(
 					'noChanges'     => __( 'No unsaved changes', 'easy-php-settings' ),
 					'oneChange'     => __( '1 unsaved change', 'easy-php-settings' ),
@@ -371,6 +398,17 @@ class Easy_PHP_Settings {
 					'manyChanges'   => __( '%d unsaved changes', 'easy-php-settings' ),
 					/* translators: 1: preset name, 2: number of fields filled */
 					'presetApplied' => __( '%1$s preset filled %2$d fields. Review them, then save.', 'easy-php-settings' ),
+					'checking'      => __( 'Checking the server…', 'easy-php-settings' ),
+					/* translators: %s: time of day */
+					'checkedAt'     => __( 'Checked at %s', 'easy-php-settings' ),
+					'checkFailed'   => __( 'Could not check the server. Showing values from this page.', 'easy-php-settings' ),
+					'blockedOne'    => __( 'Your server is not using 1 of your saved settings', 'easy-php-settings' ),
+					/* translators: %d: number of settings */
+					'blockedMany'   => __( 'Your server is not using %d of your saved settings', 'easy-php-settings' ),
+					/* translators: 1: setting name, 2: saved value, 3: value in use */
+					'blockedItem'   => __( '%1$s: saved %2$s, in use %3$s', 'easy-php-settings' ),
+					'blockedHost'   => __( 'The server reads .user.ini but keeps the old values, so your host probably sets them in a way the plugin cannot override. Send them the message below.', 'easy-php-settings' ),
+					'blockedNoIni'  => __( 'This server does not read .user.ini, so the plugin cannot apply these values. Send your host the message below, or use the .htaccess snippet in the tools further down.', 'easy-php-settings' ),
 				),
 				'noRowsSelected' => esc_html__( 'No rows selected.', 'easy-php-settings' ),
 				'presets'        => $this->quick_presets,

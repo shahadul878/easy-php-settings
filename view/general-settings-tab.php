@@ -14,19 +14,13 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$easy_php_settings_health_labels = array(
-	'low'  => __( 'Below recommended', 'easy-php-settings' ),
-	'ok'   => __( 'Recommended range', 'easy-php-settings' ),
-	'high' => __( 'Above recommended', 'easy-php-settings' ),
-);
-
 /**
  * Print one group of setting rows.
  *
  * @param array[] $rows     Rows from build_rows().
  * @param bool    $is_php   True for PHP INI settings, false for wp-config.php constants.
  */
-$easy_php_settings_render_rows = function ( array $rows, $is_php ) use ( $view, $easy_php_settings_health_labels ) {
+$easy_php_settings_render_rows = function ( array $rows, $is_php ) {
 	foreach ( $rows as $row ) :
 		$state_id = $row['id'] . '-state';
 		$help_id  = $row['id'] . '-help';
@@ -63,55 +57,7 @@ $easy_php_settings_render_rows = function ( array $rows, $is_php ) use ( $view, 
 			</div>
 
 			<div class="eps-row__state" id="<?php echo esc_attr( $state_id ); ?>">
-				<div class="eps-live">
-					<span class="eps-live__label"><?php esc_html_e( 'In use', 'easy-php-settings' ); ?></span>
-					<span class="eps-live__value"><?php echo esc_html( '' !== $row['live'] ? $row['live'] : '—' ); ?></span>
-					<?php if ( $row['health'] ) : ?>
-						<span class="eps-pill eps-pill--<?php echo esc_attr( $row['health'] ); ?>"><?php echo esc_html( $easy_php_settings_health_labels[ $row['health'] ] ); ?></span>
-					<?php endif; ?>
-				</div>
-
-				<?php if ( 'applied' === $row['applied'] ) : ?>
-					<p class="eps-row__note eps-row__note--ok">
-						<span class="dashicons dashicons-yes" aria-hidden="true"></span>
-						<?php esc_html_e( 'Your saved value is in use.', 'easy-php-settings' ); ?>
-					</p>
-				<?php elseif ( 'unset' === $row['applied'] ) : ?>
-					<p class="eps-row__note">
-						<?php esc_html_e( 'Not set here; using the server default.', 'easy-php-settings' ); ?>
-					</p>
-				<?php else : ?>
-					<p class="eps-row__note eps-row__note--warn">
-						<span class="dashicons dashicons-clock" aria-hidden="true"></span>
-						<?php
-						if ( $is_php ) {
-							echo esc_html(
-								sprintf(
-									/* translators: 1: saved value, 2: value in use, 3: seconds */
-									__( 'Saved %1$s, but the server still uses %2$s. .user.ini changes can take up to %3$d seconds. If it stays like this, your host may block the change.', 'easy-php-settings' ),
-									$row['value'],
-									$row['live'],
-									$view['cache_ttl']
-								)
-							);
-						} else {
-							echo esc_html(
-								sprintf(
-									/* translators: 1: saved value, 2: value in use */
-									__( 'Saved %1$s, but WordPress uses %2$s. The constant may be set earlier in wp-config.php or by another plugin.', 'easy-php-settings' ),
-									$row['value'],
-									$row['live']
-								)
-							);
-						}
-						?>
-					</p>
-					<?php
-					if ( $is_php ) {
-						$this->render_manual_instructions( $row['key'] );
-					}
-					?>
-				<?php endif; ?>
+				<?php $this->render_row_state( $row, $is_php ); ?>
 			</div>
 		</div>
 		<?php
@@ -157,9 +103,26 @@ $easy_php_settings_render_rows = function ( array $rows, $is_php ) use ( $view, 
 	<?php endif; ?>
 
 	<section class="eps-section" aria-labelledby="eps-php-title">
-		<div class="eps-section__head">
-			<p class="eps-kicker"><?php esc_html_e( 'Written to .user.ini and php.ini', 'easy-php-settings' ); ?></p>
-			<h2 class="eps-section__title" id="eps-php-title"><?php esc_html_e( 'PHP limits', 'easy-php-settings' ); ?></h2>
+		<div class="eps-section__head eps-section__head--split">
+			<div>
+				<p class="eps-kicker"><?php esc_html_e( 'Written to .user.ini and php.ini', 'easy-php-settings' ); ?></p>
+				<h2 class="eps-section__title" id="eps-php-title"><?php esc_html_e( 'PHP limits', 'easy-php-settings' ); ?></h2>
+			</div>
+			<div class="eps-live-check">
+				<span class="eps-live-check__status" aria-live="polite"></span>
+				<button type="button" class="button button-small eps-live-check__button" hidden>
+					<span class="dashicons dashicons-update" aria-hidden="true"></span>
+					<?php esc_html_e( 'Check again', 'easy-php-settings' ); ?>
+				</button>
+			</div>
+		</div>
+		<div class="eps-blocked" role="status" hidden>
+			<p class="eps-blocked__title"></p>
+			<ul class="eps-blocked__list"></ul>
+			<p class="eps-blocked__why"></p>
+			<label class="eps-blocked__label" for="eps-host-request"><?php esc_html_e( 'Message for your host', 'easy-php-settings' ); ?></label>
+			<textarea id="eps-host-request" class="eps-blocked__request" rows="7" readonly></textarea>
+			<button type="button" class="button button-small easy-php-copy-config" data-target="eps-host-request"><?php esc_html_e( 'Copy message', 'easy-php-settings' ); ?></button>
 		</div>
 		<div class="eps-rows">
 			<?php $easy_php_settings_render_rows( $view['php_rows'], true ); ?>

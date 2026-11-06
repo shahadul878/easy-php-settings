@@ -273,6 +273,82 @@
 	font-size: 12.5px;
 }
 
+/* Section head with the live-check control on the right. */
+.easy-php-settings-app .eps-section__head--split {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 8px 16px;
+}
+
+.easy-php-settings-app .eps-live-check {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.easy-php-settings-app .eps-live-check__status {
+	color: var(--eps-faint);
+	font-size: 12px;
+}
+
+.easy-php-settings-app .eps-live-check__button .dashicons {
+	width: 14px;
+	height: 14px;
+	margin: 0 4px 0 -2px;
+	font-size: 14px;
+	vertical-align: -2px;
+}
+
+/* Host-blocking alert above the PHP limit rows. */
+.easy-php-settings-app .eps-blocked {
+	margin: 0 0 16px;
+	padding: 14px 16px;
+	border: 1px solid #f1d39a;
+	border-radius: var(--eps-radius-sm);
+	background: var(--eps-low-soft);
+	color: #5c3600;
+}
+
+.easy-php-settings-app .eps-blocked__title {
+	margin: 0 0 6px;
+	color: #4a2c00;
+	font-size: 14px;
+	font-weight: 650;
+}
+
+.easy-php-settings-app .eps-blocked__list {
+	margin: 0 0 8px 18px;
+	font-family: var(--eps-mono);
+	font-size: 12.5px;
+	list-style: disc;
+}
+
+.easy-php-settings-app .eps-blocked__why {
+	margin: 0 0 10px;
+	font-size: 12.5px;
+	line-height: 1.5;
+}
+
+.easy-php-settings-app .eps-blocked__label {
+	display: block;
+	margin-bottom: 4px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.easy-php-settings-app .eps-blocked__request {
+	display: block;
+	width: 100%;
+	max-width: 560px;
+	margin-bottom: 8px;
+	border-color: #e7c27f;
+	background: #fff;
+	font-family: var(--eps-mono);
+	font-size: 12px;
+}
+
 /* ─── Presets ────────────────────────────────────────────── */
 
 .easy-php-settings-app .eps-presets {

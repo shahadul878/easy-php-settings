@@ -15,3 +15,8 @@ require_once dirname( __DIR__ ) . '/includes/class-easyinifile.php';
 require_once dirname( __DIR__ ) . '/includes/class-easy-settings-validator.php';
 require_once dirname( __DIR__ ) . '/includes/class-easy-php-settings-cli.php';
 require_once dirname( __DIR__ ) . '/includes/class-easy-ini-change-method.php';
+require_once dirname( __DIR__ ) . '/includes/class-easy-limit-health.php';
+require_once dirname( __DIR__ ) . '/includes/class-easy-site-health.php';
+require_once dirname( __DIR__ ) . '/includes/class-easy-live-check.php';
+require_once dirname( __DIR__ ) . '/includes/class-easy-upload-hint.php';
+require_once dirname( __DIR__ ) . '/includes/class-easy-debug-log-parser.php';

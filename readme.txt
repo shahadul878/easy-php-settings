@@ -196,6 +196,13 @@ Unreleased
 * Fixed: A JavaScript error on tabs without the custom php.ini editor.
 * Fixed: "Use recommended" is offered only when the current value is below the recommendation, so it never suggests lowering a limit.
 * Removed: The "Test Settings" button, which only showed a timed message; the per-setting "In use" check replaces it.
+* Added: Two Site Health checks: "PHP limits" (flags values below the recommendation) and "Saved PHP settings in use" (flags saved values the server ignores).
+* Added: The General tab re-checks the values PHP really uses when it loads, with a "Check again" button. Admin pages can show values the plugin set only for that page; the check reads them without that.
+* Added: An alert on the General tab when the server keeps ignoring saved settings, with a ready-to-send message for your host.
+* Added: Under the Media uploader, a note saying which PHP setting sets the upload limit, with a link to change it.
+* Changed: The debug log viewer groups repeated errors with a count, shows the newest first, filters by type (fatal, warning, notice, deprecated), and keeps the raw log one click away. It now reads the last 256 KB instead of 64 KB.
+* Fixed: Deleting the plugin now removes its lines from .user.ini and php.ini (other plugins' lines are kept).
+* Fixed: memory_limit = -1 and max_execution_time = 0 (no limit) are no longer shown as "Below recommended".
 * Added: `wp easy-php` WP-CLI command with `list`, `get`, `set`, `debug on|off`, and `remove-ini` subcommands. Run `wp help easy-php` for details.
 * Changed: Settings history records "wp-cli" as the user for changes made from the command line.
 * Fixed: If writing debugging constants to wp-config.php fails, the stored debugging settings are no longer changed to values that were never applied.

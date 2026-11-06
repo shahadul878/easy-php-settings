@@ -80,3 +80,25 @@ namespace WP_CLI\Utils {
 		\WP_CLI::$calls[] = array( 'format_items', $format, $items, $fields );
 	}
 }
+
+namespace {
+
+	function esc_html( $text ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+	}
+
+	function esc_url( $url ) {
+		return (string) $url;
+	}
+
+	function admin_url( $path = '' ) {
+		return 'http://example.test/wp-admin/' . ltrim( $path, '/' );
+	}
+}
+
+namespace {
+
+	function esc_html__( $text, $domain = 'default' ) {
+		return esc_html( $text );
+	}
+}

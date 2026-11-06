@@ -1,0 +1,162 @@
+/* ============================================================
+   Easy PHP Settings — debug log viewer (Tools tab)
+   Uses the tokens defined in admin-theme.css.
+   ============================================================ */
+
+/* ─── Debug log viewer ───────────────────────────────────── */
+
+.easy-php-settings-app .eps-log {
+	margin-top: 14px;
+}
+
+.easy-php-settings-app .eps-log__filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-bottom: 12px;
+}
+
+.easy-php-settings-app .eps-log__filter {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
+	border: 1px solid var(--eps-line-strong);
+	border-radius: 999px;
+	background: var(--eps-surface);
+	color: var(--eps-text);
+	font-size: 12.5px;
+	font-weight: 550;
+	cursor: pointer;
+}
+
+.easy-php-settings-app .eps-log__filter[aria-pressed="true"] {
+	border-color: var(--eps-ink);
+	background: var(--eps-ink);
+	color: #fff;
+}
+
+.easy-php-settings-app .eps-log__filter:focus-visible {
+	outline: 2px solid var(--eps-accent);
+	outline-offset: 2px;
+}
+
+.easy-php-settings-app .eps-log__count {
+	font-family: var(--eps-mono);
+	font-size: 11.5px;
+	opacity: 0.75;
+}
+
+.easy-php-settings-app .eps-log__list {
+	max-height: 520px;
+	margin: 0;
+	padding: 0;
+	overflow-y: auto;
+	border: 1px solid var(--eps-line);
+	border-radius: var(--eps-radius-sm);
+	list-style: none;
+}
+
+.easy-php-settings-app .eps-log__item {
+	display: grid;
+	grid-template-columns: 92px 1fr;
+	gap: 12px;
+	margin: 0;
+	padding: 12px 14px;
+	border-bottom: 1px solid var(--eps-line);
+}
+
+.easy-php-settings-app .eps-log__item:last-child {
+	border-bottom: 0;
+}
+
+.easy-php-settings-app .eps-log__level {
+	align-self: start;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: var(--eps-subtle);
+	color: var(--eps-muted);
+	font-size: 11.5px;
+	font-weight: 600;
+	text-align: center;
+}
+
+.easy-php-settings-app .eps-log__level--fatal {
+	background: var(--eps-danger-soft);
+	color: var(--eps-danger);
+}
+
+.easy-php-settings-app .eps-log__level--warning,
+.easy-php-settings-app .eps-log__level--database {
+	background: var(--eps-low-soft);
+	color: var(--eps-low);
+}
+
+.easy-php-settings-app .eps-log__level--notice,
+.easy-php-settings-app .eps-log__level--deprecated {
+	background: var(--eps-high-soft);
+	color: var(--eps-high);
+}
+
+.easy-php-settings-app .eps-log__message {
+	margin: 0;
+	color: var(--eps-ink);
+	font-family: var(--eps-mono);
+	font-size: 12.5px;
+	line-height: 1.5;
+	word-break: break-word;
+}
+
+.easy-php-settings-app .eps-log__meta {
+	margin: 4px 0 0;
+	color: var(--eps-faint);
+	font-size: 12px;
+}
+
+.easy-php-settings-app .eps-log__detail summary {
+	margin-top: 6px;
+	color: var(--eps-accent);
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.easy-php-settings-app .eps-log__detail pre {
+	margin: 6px 0 0;
+	padding: 10px;
+	overflow-x: auto;
+	border-radius: var(--eps-radius-sm);
+	background: var(--eps-subtle);
+	font-size: 11.5px;
+	white-space: pre-wrap;
+}
+
+.easy-php-settings-app .eps-log__more {
+	margin: 8px 0 0;
+	color: var(--eps-muted);
+	font-size: 12px;
+}
+
+.easy-php-settings-app .eps-log__raw {
+	margin-top: 12px;
+}
+
+.easy-php-settings-app .eps-log__raw summary {
+	color: var(--eps-accent);
+	font-size: 12.5px;
+	cursor: pointer;
+}
+
+.easy-php-settings-app .eps-log__raw textarea {
+	margin-top: 8px;
+}
+
+@media (max-width: 600px) {
+	.easy-php-settings-app .eps-log__item {
+		grid-template-columns: 1fr;
+		gap: 6px;
+	}
+
+	.easy-php-settings-app .eps-log__level {
+		justify-self: start;
+	}
+}

@@ -228,6 +228,7 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		if ( is_wp_error( $result ) ) {
 			Easy_Error_Handler::add_settings_error( 'easy_php_settings_settings', 'config_files_error', $result->get_error_message(), 'error' );
 		} elseif ( ! empty( $result ) && is_array( $result ) ) {
+			$this->plugin->get_live_check()->mark_saved();
 			add_settings_error(
 				'easy_php_settings_settings',
 				'config_files_created',
@@ -392,31 +393,6 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		);
 	}
 
-	/* ─── Status Indicators ───────────────────── */
-
-	/**
-	 * Get status label and CSS class for a setting value vs recommended.
-	 * Returns: 'low' | 'ok' | 'high' (too high / warning).
-	 */
-	private function get_status_for_value( $key, $current_value, $recommended ) {
-		if ( ! isset( $recommended[ $key ] ) ) {
-			return null;
-		}
-		$rec = $recommended[ $key ];
-		$is_size = in_array( $key, array( 'memory_limit', 'upload_max_filesize', 'post_max_size', 'wp_memory_limit', 'wp_max_memory_limit' ), true );
-		$current_bytes = $is_size ? $this->plugin->convert_to_bytes( $current_value ) : (int) $current_value;
-		$rec_bytes     = $is_size ? $this->plugin->convert_to_bytes( $rec ) : (int) $rec;
-
-		if ( $current_bytes < $rec_bytes ) {
-			return 'low';
-		}
-		$threshold = $is_size ? 1.5 : 2;
-		if ( $rec_bytes > 0 && $current_bytes > $rec_bytes * $threshold ) {
-			return 'high';
-		}
-		return 'ok';
-	}
-
 	/* ─── Helpers ─────────────────────────────── */
 
 	public function get_wp_memory_value( $key ) {
@@ -496,25 +472,6 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 	}
 
 	/**
-	 * Whether the server is using the saved value.
-	 *
-	 * @param string $key   Setting key.
-	 * @param string $saved Saved value ('' when not set).
-	 * @param string $live  Value currently in effect.
-	 * @return string 'unset' | 'applied' | 'pending'
-	 */
-	private function get_applied_state( $key, $saved, $live ) {
-		if ( '' === (string) $saved ) {
-			return 'unset';
-		}
-		$is_count = in_array( $key, array( 'max_execution_time', 'max_input_vars' ), true );
-		$matches  = $is_count
-			? (int) $saved === (int) $live
-			: $this->plugin->convert_to_bytes( $saved ) === $this->plugin->convert_to_bytes( $live );
-		return $matches ? 'applied' : 'pending';
-	}
-
-	/**
 	 * Build the view data for one group of setting rows.
 	 *
 	 * @param string[] $keys        Setting keys.
@@ -543,8 +500,8 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 				'live'        => $live,
 				'recommended' => isset( $recommended[ $key ] ) ? $recommended[ $key ] : '',
 				'unit_hint'   => $this->get_unit_hint( $key ),
-				'health'      => $this->get_status_for_value( $key, $live, $recommended ),
-				'applied'     => $this->get_applied_state( $key, $value, $live ),
+				'health'      => Easy_Limit_Health::status( $key, $live, isset( $recommended[ $key ] ) ? $recommended[ $key ] : '' ),
+				'applied'     => Easy_Limit_Health::applied_state( $key, $value, $live ),
 			);
 		}
 
@@ -555,12 +512,7 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		$options = $this->plugin->get_option( 'easy_php_settings_settings', array() );
 		$view    = array(
 			'presets'    => $this->plugin->get_presets(),
-			'php_rows'   => $this->build_rows(
-				$this->plugin->get_settings_keys(),
-				'easy_php_settings_settings',
-				$this->plugin->get_recommended_values(),
-				'ini_get'
-			),
+			'php_rows'   => $this->php_view_rows(),
 			'wp_rows'    => $this->build_rows(
 				$this->plugin->get_wp_memory_settings_keys(),
 				'easy_php_settings_wp_memory_settings',
@@ -572,6 +524,61 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		);
 
 		include plugin_dir_path( dirname( __FILE__ ) ) . 'view/general-settings-tab.php';
+	}
+
+	/**
+	 * View rows for the PHP settings, using the values in the current request.
+	 *
+	 * @return array[]
+	 */
+	public function php_view_rows() {
+		return $this->build_rows(
+			$this->plugin->get_settings_keys(),
+			'easy_php_settings_settings',
+			$this->plugin->get_recommended_values(),
+			function ( $key ) {
+				return (string) ini_get( $key );
+			}
+		);
+	}
+
+	/**
+	 * Print the "In use" cell for one row.
+	 *
+	 * @param array $row    Row from build_rows().
+	 * @param bool  $is_php True for PHP INI settings, false for wp-config.php constants.
+	 * @return void
+	 */
+	public function render_row_state( array $row, $is_php ) {
+		$health_labels = array(
+			Easy_Limit_Health::LOW  => __( 'Below recommended', 'easy-php-settings' ),
+			Easy_Limit_Health::OK   => __( 'Recommended range', 'easy-php-settings' ),
+			Easy_Limit_Health::HIGH => __( 'Above recommended', 'easy-php-settings' ),
+		);
+		$cache_ttl     = (int) ini_get( 'user_ini.cache_ttl' );
+
+		include plugin_dir_path( dirname( __FILE__ ) ) . 'view/partials/setting-state.php';
+	}
+
+	/**
+	 * "In use" cells for every PHP setting, keyed by setting, as HTML.
+	 *
+	 * Used by the REST live check, which runs without the plugin's ini_set()
+	 * calls and so shows the values PHP really uses.
+	 *
+	 * @return array<string, array{applied: string, html: string}>
+	 */
+	public function render_php_states() {
+		$states = array();
+		foreach ( $this->php_view_rows() as $row ) {
+			ob_start();
+			$this->render_row_state( $row, true );
+			$states[ $row['key'] ] = array(
+				'applied' => $row['applied'],
+				'html'    => (string) ob_get_clean(),
+			);
+		}
+		return $states;
 	}
 
 	/**

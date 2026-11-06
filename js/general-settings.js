@@ -180,6 +180,88 @@
 		}
 	} );
 
+	/* ─── Live check: values PHP really uses (REST runs without the plugin's ini_set) ─── */
+
+	var liveCheck = form.querySelector( '.eps-live-check' );
+	var liveStatus = liveCheck ? liveCheck.querySelector( '.eps-live-check__status' ) : null;
+	var liveButton = liveCheck ? liveCheck.querySelector( '.eps-live-check__button' ) : null;
+
+	function applyLiveStates( settings ) {
+		Object.keys( settings ).forEach( function ( key ) {
+			var row = form.querySelector( '.eps-row[data-key="' + key + '"]' );
+			var cell = row ? row.querySelector( '.eps-row__state' ) : null;
+			if ( ! cell ) {
+				return;
+			}
+			// HTML is rendered and escaped server-side by the same template as the page.
+			cell.innerHTML = settings[ key ].html;
+			row.className = row.className.replace( /\beps-row--(unset|applied|pending)\b/, 'eps-row--' + settings[ key ].applied );
+		} );
+	}
+
+	function showBlocked( data ) {
+		var box = form.querySelector( '.eps-blocked' );
+		var blocked = data.blocked || [];
+		if ( ! box ) {
+			return;
+		}
+		box.hidden = ! blocked.length;
+		if ( ! blocked.length ) {
+			return;
+		}
+
+		box.querySelector( '.eps-blocked__title' ).textContent = 1 === blocked.length
+			? ( i18n.blockedOne || 'Your server is not using 1 of your saved settings' )
+			: format( i18n.blockedMany || 'Your server is not using %d of your saved settings', [ blocked.length ] );
+
+		var list = box.querySelector( '.eps-blocked__list' );
+		list.textContent = '';
+		blocked.forEach( function ( item ) {
+			var li = document.createElement( 'li' );
+			li.textContent = format( i18n.blockedItem || '%1$s: saved %2$s, in use %3$s', [ item.key, item.saved, item.live ] );
+			list.appendChild( li );
+		} );
+
+		box.querySelector( '.eps-blocked__why' ).textContent = data.reads_user_ini ? i18n.blockedHost : i18n.blockedNoIni;
+		box.querySelector( '.eps-blocked__request' ).value = data.host_request || '';
+	}
+
+	function runLiveCheck() {
+		if ( ! liveCheck || ! vars.liveCheck || ! window.fetch ) {
+			return;
+		}
+		liveStatus.textContent = i18n.checking || 'Checking the server…';
+		liveButton.disabled = true;
+
+		window.fetch( vars.liveCheck.url, {
+			credentials: 'same-origin',
+			headers: { 'X-WP-Nonce': vars.liveCheck.nonce },
+		} )
+			.then( function ( response ) {
+				if ( ! response.ok ) {
+					throw new Error( 'HTTP ' + response.status );
+				}
+				return response.json();
+			} )
+			.then( function ( data ) {
+				applyLiveStates( data.settings || {} );
+				showBlocked( data );
+				liveStatus.textContent = format( i18n.checkedAt || 'Checked at %s', [ new Date().toLocaleTimeString() ] );
+			} )
+			.catch( function () {
+				liveStatus.textContent = i18n.checkFailed || 'Could not check the server.';
+			} )
+			.then( function () {
+				liveButton.hidden = false;
+				liveButton.disabled = false;
+			} );
+	}
+
+	if ( liveButton ) {
+		liveButton.addEventListener( 'click', runLiveCheck );
+	}
+	runLiveCheck();
+
 	/* ─── Leave-page guard ─── */
 
 	form.addEventListener( 'submit', function () {
