@@ -60,6 +60,7 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-config-parser.ph
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-error-handler.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-settings-validator.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-settings-cache.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-ini-change-method.php';
 
 // Module system.
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-module-base.php';
@@ -347,24 +348,88 @@ class Easy_PHP_Settings {
 		if ( false !== $settings ) {
 			wp_add_inline_script(
 				'code-editor',
-				sprintf( 'jQuery( function() { wp.codeEditor.initialize( "easy_php_settings_custom_php_ini", %s ); } );', wp_json_encode( $settings ) )
+				sprintf( 'jQuery( function() { if ( document.getElementById( "easy_php_settings_custom_php_ini" ) ) { wp.codeEditor.initialize( "easy_php_settings_custom_php_ini", %s ); } } );', wp_json_encode( $settings ) )
 			);
 		}
 
 		wp_enqueue_style( 'easy-php-settings-styles', plugin_dir_url( __FILE__ ) . 'css/admin-styles.css', array(), $this->version );
+		wp_enqueue_style( 'easy-php-settings-theme', plugin_dir_url( __FILE__ ) . 'css/admin-theme.css', array( 'easy-php-settings-styles' ), $this->version );
+		wp_enqueue_style( 'easy-php-settings-theme-components', plugin_dir_url( __FILE__ ) . 'css/admin-theme-components.css', array( 'easy-php-settings-theme' ), $this->version );
 
 		wp_enqueue_script( 'easy-php-settings-admin', plugin_dir_url( __FILE__ ) . 'js/admin.js', array( 'jquery' ), $this->version, true );
+		wp_enqueue_script( 'easy-php-settings-general', plugin_dir_url( __FILE__ ) . 'js/general-settings.js', array( 'easy-php-settings-admin' ), $this->version, true );
 		wp_localize_script( 'easy-php-settings-admin', 'easy_php_settingsKeys', $this->settings_keys );
 		wp_localize_script(
 			'easy-php-settings-admin',
 			'easy_php_settingsAdminVars',
 			array(
 				'copiedText'     => esc_html__( 'Copied to clipboard!', 'easy-php-settings' ),
-				'testCompleted'  => esc_html__( 'Settings test completed. Check the Status tab for detailed information.', 'easy-php-settings' ),
+				'i18n'           => array(
+					'noChanges'     => __( 'No unsaved changes', 'easy-php-settings' ),
+					'oneChange'     => __( '1 unsaved change', 'easy-php-settings' ),
+					/* translators: %d: number of changed fields */
+					'manyChanges'   => __( '%d unsaved changes', 'easy-php-settings' ),
+					/* translators: 1: preset name, 2: number of fields filled */
+					'presetApplied' => __( '%1$s preset filled %2$d fields. Review them, then save.', 'easy-php-settings' ),
+				),
 				'noRowsSelected' => esc_html__( 'No rows selected.', 'easy-php-settings' ),
 				'presets'        => $this->quick_presets,
 				'tooltips'       => $this->setting_tooltips,
 			)
+		);
+	}
+
+	/**
+	 * Facts about this server shown in the page header.
+	 *
+	 * Each item has a label, value, hint (tooltip) and state: ok, warn or neutral.
+	 *
+	 * @return array[]
+	 */
+	private function get_server_readout() {
+		$sapi           = php_sapi_name();
+		$user_ini       = (string) ini_get( 'user_ini.filename' );
+		$reads_user_ini = Easy_Ini_Change_Method::server_reads_user_ini( $sapi, $user_ini );
+		$is_writable    = wp_is_writable( ABSPATH );
+
+		return array(
+			array(
+				'label' => __( 'PHP', 'easy-php-settings' ),
+				'value' => PHP_VERSION,
+				'hint'  => __( 'PHP version running this site.', 'easy-php-settings' ),
+				'state' => 'neutral',
+			),
+			array(
+				'label' => __( 'Server API', 'easy-php-settings' ),
+				'value' => $sapi,
+				'hint'  => __( 'How PHP is connected to the web server.', 'easy-php-settings' ),
+				'state' => 'neutral',
+			),
+			array(
+				'label' => __( '.user.ini', 'easy-php-settings' ),
+				'value' => $reads_user_ini
+					/* translators: %d: seconds PHP caches .user.ini for */
+					? sprintf( __( 'Read · %ds cache', 'easy-php-settings' ), (int) ini_get( 'user_ini.cache_ttl' ) )
+					: __( 'Not read', 'easy-php-settings' ),
+				'hint'  => $reads_user_ini
+					? __( 'This server applies .user.ini. Changes take effect after the cache time.', 'easy-php-settings' )
+					: __( 'This server does not read .user.ini. Use the manual snippets or ask your host.', 'easy-php-settings' ),
+				'state' => $reads_user_ini ? 'ok' : 'warn',
+			),
+			array(
+				'label' => __( 'Site root', 'easy-php-settings' ),
+				'value' => $is_writable ? __( 'Writable', 'easy-php-settings' ) : __( 'Read-only', 'easy-php-settings' ),
+				'hint'  => $is_writable
+					? __( 'The plugin can write its INI files.', 'easy-php-settings' )
+					: __( 'The plugin cannot write INI files here. Copy the generated snippets instead.', 'easy-php-settings' ),
+				'state' => $is_writable ? 'ok' : 'warn',
+			),
+			array(
+				'label' => __( 'WordPress', 'easy-php-settings' ),
+				'value' => get_bloginfo( 'version' ),
+				'hint'  => __( 'WordPress version.', 'easy-php-settings' ),
+				'state' => 'neutral',
+			),
 		);
 	}
 
@@ -421,29 +486,42 @@ class Easy_PHP_Settings {
 		);
 		?>
 		<div class="wrap easy-php-settings-app">
-			<div class="easy-php-settings-hero">
-				<div class="easy-php-settings-hero__brand">
-					<span class="easy-php-settings-hero__icon dashicons dashicons-performance" aria-hidden="true"></span>
-					<div>
-						<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
-						<p><?php esc_html_e( 'Manage PHP limits, WordPress memory, debugging, extensions, and server configuration from one place.', 'easy-php-settings' ); ?></p>
+			<header class="eps-header">
+				<div class="eps-header__top">
+					<div class="eps-header__brand">
+						<span class="eps-header__mark dashicons dashicons-performance" aria-hidden="true"></span>
+						<div>
+							<h1 class="eps-header__title"><?php echo esc_html( get_admin_page_title() ); ?></h1>
+							<p class="eps-header__tagline"><?php esc_html_e( 'PHP limits, WordPress memory and debugging, in one place.', 'easy-php-settings' ); ?></p>
+						</div>
 					</div>
+					<span class="eps-header__version">v<?php echo esc_html( $version ); ?></span>
 				</div>
-				<span class="easy-php-settings-version">v<?php echo esc_html( $version ); ?></span>
-			</div>
+
+				<dl class="eps-readout" aria-label="<?php esc_attr_e( 'Server summary', 'easy-php-settings' ); ?>">
+					<?php foreach ( $this->get_server_readout() as $item ) : ?>
+						<div class="eps-readout__item eps-readout__item--<?php echo esc_attr( $item['state'] ); ?>">
+							<dt><?php echo esc_html( $item['label'] ); ?></dt>
+							<dd title="<?php echo esc_attr( $item['hint'] ); ?>"><?php echo esc_html( $item['value'] ); ?></dd>
+						</div>
+					<?php endforeach; ?>
+				</dl>
+
+				<nav class="eps-tabs" aria-label="<?php esc_attr_e( 'Easy PHP Settings sections', 'easy-php-settings' ); ?>">
+					<?php foreach ( $ordered_tabs as $id => $cfg ) : ?>
+						<?php $icon = isset( $tab_icons[ $id ] ) ? $tab_icons[ $id ] : 'dashicons-admin-generic'; ?>
+						<a href="<?php echo esc_url( add_query_arg( array( 'page' => 'easy-php-settings', 'tab' => $id ), admin_url( 'tools.php' ) ) ); ?>"
+							class="eps-tabs__link<?php echo $id === $active_tab ? ' is-active' : ''; ?>"
+							<?php echo $id === $active_tab ? 'aria-current="page"' : ''; ?>>
+							<span class="dashicons <?php echo esc_attr( $icon ); ?>" aria-hidden="true"></span>
+							<?php echo esc_html( $cfg['title'] ); ?>
+						</a>
+					<?php endforeach; ?>
+				</nav>
+			</header>
+			<hr class="wp-header-end">
 
 			<?php settings_errors(); ?>
-
-			<nav class="easy-php-settings-tabs nav-tab-wrapper" aria-label="<?php esc_attr_e( 'Easy PHP Settings sections', 'easy-php-settings' ); ?>">
-				<?php foreach ( $ordered_tabs as $id => $cfg ) : ?>
-					<?php $icon = isset( $tab_icons[ $id ] ) ? $tab_icons[ $id ] : 'dashicons-admin-generic'; ?>
-					<a href="<?php echo esc_url( add_query_arg( array( 'page' => 'easy-php-settings', 'tab' => $id ), admin_url( 'tools.php' ) ) ); ?>"
-					   class="nav-tab <?php echo $id === $active_tab ? 'nav-tab-active' : ''; ?>">
-						<span class="dashicons <?php echo esc_attr( $icon ); ?>" aria-hidden="true"></span>
-						<?php echo esc_html( $cfg['title'] ); ?>
-					</a>
-				<?php endforeach; ?>
-			</nav>
 
 			<div class="easy-php-settings-panel">
 			<?php
@@ -459,4 +537,9 @@ class Easy_PHP_Settings {
 	}
 }
 
-new Easy_PHP_Settings();
+$easy_php_settings_plugin = new Easy_PHP_Settings();
+
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+	require_once plugin_dir_path( __FILE__ ) . 'includes/class-easy-php-settings-cli.php';
+	WP_CLI::add_command( 'easy-php', new Easy_PHP_Settings_CLI( $easy_php_settings_plugin ) );
+}

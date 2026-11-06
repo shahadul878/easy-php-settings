@@ -28,8 +28,8 @@ Screenshots correspond to the `== Screenshots ==` section in `readme.txt`. They 
 
 | File | Tab | Description |
 |------|-----|-------------|
-| `screenshot-1.png` | General Settings | PHP memory, upload limits, execution time, presets, WordPress memory constants |
-| `screenshot-2.png` | Tools | Debugging toggles, log viewer, export/import, reset options |
+| `screenshot-1.png` | General Settings | Server summary header, presets, PHP limits with in-use values, WordPress memory |
+| `screenshot-2.png` | Tools | Debugging switches with explanations, log viewer, export/import, reset options |
 | `screenshot-3.png` | PHP Settings | Full table of all PHP directives with search and copy |
 | `screenshot-4.png` | Extensions | Loaded PHP extensions by category with missing extension alerts |
 | `screenshot-5.png` | Status | Live comparison of current vs. recommended PHP and WP memory values |

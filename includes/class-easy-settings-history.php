@@ -40,6 +40,19 @@ class Easy_Settings_History {
 	private function __construct() {}
 
 	/**
+	 * Name to record for who made a change.
+	 *
+	 * @param WP_User $user Current user (ID 0 when none, e.g. WP-CLI without --user).
+	 * @return string
+	 */
+	private static function actor_label( $user ) {
+		if ( $user->ID ) {
+			return $user->user_login;
+		}
+		return ( defined( 'WP_CLI' ) && WP_CLI ) ? 'wp-cli' : '';
+	}
+
+	/**
 	 * Add a history entry
 	 *
 	 * @param array  $old_values The old values.
@@ -55,7 +68,7 @@ class Easy_Settings_History {
 		$entry = array(
 			'timestamp'    => current_time( 'mysql' ),
 			'user_id'      => $user->ID,
-			'user_login'   => $user->user_login,
+			'user_login'   => self::actor_label( $user ),
 			'setting_type' => $setting_type,
 			'changes'      => array(),
 		);

@@ -49,3 +49,6 @@ DEPLOYMENT.md
 *.sql
 *.tar.gz
 *.zip
+
+# Test cache
+.phpunit.result.cache

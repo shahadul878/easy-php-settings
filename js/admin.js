@@ -1,66 +1,4 @@
 jQuery(document).ready(function($) {
-    // Preset selection handler
-    $('#easy_php_settings_preset').on('change', function() {
-        var presetKey = $(this).val();
-        if (presetKey && window.easy_php_settingsAdminVars && window.easy_php_settingsAdminVars.presets) {
-            var preset = window.easy_php_settingsAdminVars.presets[presetKey];
-            if (preset) {
-                var fieldsPopulated = 0;
-                // Populate all settings fields with preset values
-                $.each(preset, function(key, value) {
-                    if (key !== 'name' && key !== 'description') {
-                        if (key === 'custom_php_ini') {
-                            // Handle custom php.ini textarea
-                            var textarea = $('#easy_php_settings_custom_php_ini');
-                            if (textarea.length) {
-                                textarea.val(value);
-                                fieldsPopulated++;
-                            }
-                        } else {
-                            // Handle regular input fields
-                            var input = $('input[name="easy_php_settings_settings[' + key + ']"]');
-                            if (input.length) {
-                                input.val(value);
-                                fieldsPopulated++;
-                            } else {
-                                console.log('Field not found: easy_php_settings_settings[' + key + ']');
-                            }
-                        }
-                    }
-                });
-                
-                if (fieldsPopulated > 0) {
-                    // Show professional notification
-                    var message = '<div class="notice notice-success is-dismissible" style="margin: 15px 0; padding: 12px;">' +
-                        '<p><strong>✓ Preset Applied Successfully!</strong></p>' +
-                        '<p>The <strong>' + preset.name + '</strong> configuration has been applied. ' +
-                        '<span class="status-badge ok">' + fieldsPopulated + ' Settings Updated</span></p>' +
-                        '<p style="margin-top: 10px;"><em>Click "Save All Settings" below to apply these changes.</em></p>' +
-                        '</div>';
-                    $('.easy-php-settings-preset-box').after(message);
-                    
-                    // Scroll to top to show the message
-                    $('html, body').animate({ scrollTop: 0 }, 300);
-                    
-                    // Auto-dismiss after 8 seconds
-                    setTimeout(function() {
-                        $('.notice-success').fadeOut(500, function() {
-                            $(this).remove();
-                        });
-                    }, 8000);
-                } else {
-                    console.error('No fields were populated');
-                    console.log('Available preset data:', preset);
-                    alert('Error: No settings were applied. Please check the browser console for details.');
-                }
-            } else {
-                console.error('Preset not found for key:', presetKey);
-            }
-        } else {
-            console.error('Preset data not available. Check easy_php_settingsAdminVars:', window.easy_php_settingsAdminVars);
-        }
-    });
-
     // Configuration Generator
     $('#generate-config').on('click', function() {
         var settings = {};
@@ -178,27 +116,6 @@ jQuery(document).ready(function($) {
         }, 1500);
     }
 
-    // Test Settings
-    $('#test-settings').on('click', function() {
-        var $btn = $(this);
-        var results = $('#test-results');
-        $btn.prop('disabled', true).addClass('easy-php-settings-btn-loading');
-        results.removeAttr('hidden').html(
-            '<div class="easy-php-test-result easy-php-test-result--loading">' +
-                '<span class="easy-php-settings-btn-spinner" aria-hidden="true"></span>' +
-                '<span>Testing settings…</span>' +
-            '</div>'
-        );
-        setTimeout(function() {
-            $btn.prop('disabled', false).removeClass('easy-php-settings-btn-loading');
-            results.html(
-                '<div class="easy-php-test-result easy-php-test-result--success">' +
-                    '<span class="dashicons dashicons-yes-alt" aria-hidden="true"></span>' +
-                    '<span>' + easy_php_settingsAdminVars.testCompleted + '</span>' +
-                '</div>'
-            );
-        }, 1000);
-    });
 
     // PHP Settings Search and Copy functionality
     (function(){
@@ -361,6 +278,7 @@ jQuery(document).ready(function($) {
         
         // Remove existing error messages
         $field.next('.field-error').remove();
+        $field.closest('.eps-row__control').find('.field-error').remove();
         $field.removeClass('error');
         
         if (!value) return; // Skip empty fields
@@ -388,7 +306,13 @@ jQuery(document).ready(function($) {
             $field.addClass('error');
             var errorHtml = '<span class="field-error" style="color: #d63638; display: block; margin-top: 5px; font-size: 12px;">' + 
                 errors.join('<br>') + '</span>';
-            $field.after(errorHtml);
+            var $control = $field.closest('.eps-row__control');
+            if ($control.length) {
+                $control.find('.field-error').remove();
+                $control.append(errorHtml);
+            } else {
+                $field.after(errorHtml);
+            }
         }
     }, 500);
 
@@ -432,8 +356,8 @@ jQuery(document).ready(function($) {
             if ($field.length) {
                 var warningHtml = '<span class="relationship-warning" style="color: #d63638; display: block; margin-top: 5px; font-size: 12px;">' +
                     '⚠ ' + warning.message + '</span>';
-                $field.closest('td, .form-field').find('.relationship-warning').remove();
-                $field.closest('td, .form-field').append(warningHtml);
+                $field.closest('td, .form-field, .eps-row__control').find('.relationship-warning').remove();
+                $field.closest('td, .form-field, .eps-row__control').append(warningHtml);
             }
         });
     }
