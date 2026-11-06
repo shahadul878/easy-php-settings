@@ -1,0 +1,713 @@
+/* ============================================================
+   Easy PHP Settings — theme components
+   Setting rows, presets, custom directives, save bar and tools.
+   Uses the tokens defined in admin-theme.css.
+   ============================================================ */
+
+/* ─── Setting rows ───────────────────────────────────────── */
+
+.easy-php-settings-app .eps-rows {
+	margin: 0 -24px -22px;
+	border-top: 1px solid var(--eps-line);
+}
+
+.easy-php-settings-app .eps-row {
+	position: relative;
+	display: grid;
+	grid-template-columns: minmax(220px, 1.25fr) minmax(170px, 0.8fr) minmax(220px, 1.1fr);
+	gap: 20px;
+	align-items: start;
+	padding: 18px 24px;
+	border-bottom: 1px solid var(--eps-line);
+	transition: background-color 400ms var(--eps-ease);
+}
+
+.easy-php-settings-app .eps-row:last-child {
+	border-bottom: 0;
+	border-radius: 0 0 var(--eps-radius) var(--eps-radius);
+}
+
+/* A thin accent rail marks rows with unsaved edits. */
+.easy-php-settings-app .eps-row::before {
+	content: "";
+	position: absolute;
+	top: 12px;
+	bottom: 12px;
+	left: 0;
+	width: 3px;
+	border-radius: 0 3px 3px 0;
+	background: var(--eps-accent);
+	transform: scaleY(0);
+	transition: transform var(--eps-fast) var(--eps-ease);
+}
+
+.easy-php-settings-app .eps-row.is-changed::before {
+	transform: scaleY(1);
+}
+
+.easy-php-settings-app .eps-row.is-flashing {
+	background-color: var(--eps-accent-soft);
+	transition: none;
+}
+
+.easy-php-settings-app .eps-row__label {
+	display: block;
+	color: var(--eps-ink);
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.easy-php-settings-app .eps-row__key {
+	display: inline-block;
+	margin-top: 4px;
+	padding: 1px 6px;
+	border-radius: 4px;
+	background: var(--eps-subtle);
+	color: var(--eps-muted);
+	font-family: var(--eps-mono);
+	font-size: 11.5px;
+}
+
+.easy-php-settings-app .eps-row__help {
+	margin: 8px 0 0;
+	color: var(--eps-muted);
+	font-size: 12.5px;
+	line-height: 1.5;
+}
+
+.easy-php-settings-app .eps-row__control {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 8px;
+}
+
+.easy-php-settings-app .eps-input {
+	width: 100%;
+	max-width: 200px;
+	min-height: 38px;
+	padding: 6px 12px;
+	border: 1px solid var(--eps-line-strong);
+	border-radius: var(--eps-radius-sm);
+	background: var(--eps-surface);
+	color: var(--eps-ink);
+	font-family: var(--eps-mono);
+	font-size: 14px;
+	font-variant-numeric: tabular-nums;
+	box-shadow: inset 0 1px 1px rgba(15, 23, 41, 0.04);
+	transition: border-color var(--eps-fast) var(--eps-ease), box-shadow var(--eps-fast) var(--eps-ease);
+}
+
+.easy-php-settings-app .eps-input::placeholder {
+	color: #a3aab6;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	font-size: 13px;
+}
+
+.easy-php-settings-app .eps-input:hover {
+	border-color: #aab2bf;
+}
+
+.easy-php-settings-app .eps-input:focus {
+	border-color: var(--eps-accent);
+	outline: 0;
+	box-shadow: 0 0 0 3px rgba(47, 79, 216, 0.18);
+}
+
+.easy-php-settings-app .eps-input.error {
+	border-color: var(--eps-danger) !important;
+	box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.12);
+}
+
+.easy-php-settings-app .eps-use-rec {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--eps-accent);
+	font-size: 12.5px;
+	font-weight: 550;
+	cursor: pointer;
+}
+
+.easy-php-settings-app .eps-use-rec:hover {
+	color: var(--eps-accent-hover);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.easy-php-settings-app .eps-use-rec:focus-visible {
+	outline: 2px solid var(--eps-accent);
+	outline-offset: 2px;
+	border-radius: 3px;
+}
+
+.easy-php-settings-app .field-error,
+.easy-php-settings-app .relationship-warning {
+	margin: 0 !important;
+	color: var(--eps-danger) !important;
+	font-size: 12px !important;
+	line-height: 1.45;
+}
+
+.easy-php-settings-app .eps-live {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 8px;
+}
+
+.easy-php-settings-app .eps-live__label {
+	color: var(--eps-faint);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.easy-php-settings-app .eps-live__value {
+	color: var(--eps-ink);
+	font-family: var(--eps-mono);
+	font-size: 15px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.easy-php-settings-app .eps-pill {
+	align-self: center;
+	padding: 2px 8px;
+	border-radius: 999px;
+	font-size: 11.5px;
+	font-weight: 600;
+	line-height: 1.6;
+	white-space: nowrap;
+}
+
+.easy-php-settings-app .eps-pill--ok {
+	background: var(--eps-ok-soft);
+	color: var(--eps-ok);
+}
+
+.easy-php-settings-app .eps-pill--low {
+	background: var(--eps-low-soft);
+	color: var(--eps-low);
+}
+
+.easy-php-settings-app .eps-pill--high {
+	background: var(--eps-high-soft);
+	color: var(--eps-high);
+}
+
+.easy-php-settings-app .eps-row__note {
+	display: flex;
+	gap: 6px;
+	margin: 8px 0 0;
+	color: var(--eps-muted);
+	font-size: 12.5px;
+	line-height: 1.5;
+}
+
+.easy-php-settings-app .eps-row__note .dashicons {
+	flex: none;
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+}
+
+.easy-php-settings-app .eps-row__note--ok {
+	color: var(--eps-ok);
+}
+
+.easy-php-settings-app .eps-row__note--warn {
+	padding: 8px 10px;
+	border-radius: var(--eps-radius-sm);
+	background: var(--eps-low-soft);
+	color: #6b3d00;
+}
+
+.easy-php-settings-app .eps-row .easy-php-manual-config {
+	margin-top: 8px;
+}
+
+/* Toggle rows (debugging): description left, switch right. */
+.easy-php-settings-app .eps-row--toggle {
+	grid-template-columns: 1fr auto;
+	align-items: center;
+}
+
+.easy-php-settings-app .eps-row--toggle .switch {
+	width: 44px;
+	height: 24px;
+}
+
+.easy-php-settings-app .eps-row--toggle .slider::before {
+	width: 18px;
+	height: 18px;
+	left: 3px;
+	bottom: 3px;
+}
+
+.easy-php-settings-app .eps-row--toggle input:checked + .slider::before {
+	transform: translateX(20px);
+}
+
+/* The debugging form sits inside a section: rows and save bar join edge to edge. */
+.easy-php-settings-app .eps-section .eps-form {
+	gap: 0;
+}
+
+.easy-php-settings-app .eps-section .eps-form > .eps-rows {
+	margin-bottom: 0;
+}
+
+.easy-php-settings-app .eps-savebar.eps-savebar--inline {
+	position: static;
+	margin: 0 -24px -22px;
+	border: 0;
+	border-top: 1px solid var(--eps-line);
+	border-radius: 0 0 var(--eps-radius) var(--eps-radius);
+	background: var(--eps-subtle);
+	box-shadow: none;
+}
+
+.easy-php-settings-app .eps-savebar.eps-savebar--inline .eps-savebar__status {
+	font-size: 12.5px;
+}
+
+/* Section head with the live-check control on the right. */
+.easy-php-settings-app .eps-section__head--split {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 8px 16px;
+}
+
+.easy-php-settings-app .eps-live-check {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.easy-php-settings-app .eps-live-check__status {
+	color: var(--eps-faint);
+	font-size: 12px;
+}
+
+.easy-php-settings-app .eps-live-check__button .dashicons {
+	width: 14px;
+	height: 14px;
+	margin: 0 4px 0 -2px;
+	font-size: 14px;
+	vertical-align: -2px;
+}
+
+/* Review request, shown once saved values are confirmed in use. */
+.easy-php-settings-app .eps-review {
+	display: flex;
+	gap: 12px;
+	margin: 0 0 16px;
+	padding: 14px 16px;
+	border: 1px solid #bfe3cf;
+	border-radius: var(--eps-radius-sm);
+	background: var(--eps-ok-soft);
+}
+
+.easy-php-settings-app .eps-review[hidden] {
+	display: none;
+}
+
+.easy-php-settings-app .eps-review__icon {
+	flex: none;
+	width: 22px;
+	height: 22px;
+	color: var(--eps-ok);
+	font-size: 22px;
+}
+
+.easy-php-settings-app .eps-review__title {
+	margin: 0;
+	color: #0b5133;
+	font-size: 14px;
+	font-weight: 650;
+}
+
+.easy-php-settings-app .eps-review__text {
+	margin: 2px 0 10px;
+	color: #24563d;
+	font-size: 13px;
+}
+
+.easy-php-settings-app .eps-review__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+}
+
+.easy-php-settings-app .eps-review__actions .button {
+	min-height: 30px;
+	padding: 0 12px;
+	font-size: 12.5px;
+	line-height: 28px;
+}
+
+.easy-php-settings-app .eps-review__actions .button-link {
+	color: #24563d;
+	font-size: 12.5px;
+}
+
+/* Host-blocking alert above the PHP limit rows. */
+.easy-php-settings-app .eps-blocked {
+	margin: 0 0 16px;
+	padding: 14px 16px;
+	border: 1px solid #f1d39a;
+	border-radius: var(--eps-radius-sm);
+	background: var(--eps-low-soft);
+	color: #5c3600;
+}
+
+.easy-php-settings-app .eps-blocked__title {
+	margin: 0 0 6px;
+	color: #4a2c00;
+	font-size: 14px;
+	font-weight: 650;
+}
+
+.easy-php-settings-app .eps-blocked__list {
+	margin: 0 0 8px 18px;
+	font-family: var(--eps-mono);
+	font-size: 12.5px;
+	list-style: disc;
+}
+
+.easy-php-settings-app .eps-blocked__why {
+	margin: 0 0 10px;
+	font-size: 12.5px;
+	line-height: 1.5;
+}
+
+.easy-php-settings-app .eps-blocked__label {
+	display: block;
+	margin-bottom: 4px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.easy-php-settings-app .eps-blocked__request {
+	display: block;
+	width: 100%;
+	max-width: 560px;
+	margin-bottom: 8px;
+	border-color: #e7c27f;
+	background: #fff;
+	font-family: var(--eps-mono);
+	font-size: 12px;
+}
+
+/* ─── Presets ────────────────────────────────────────────── */
+
+.easy-php-settings-app .eps-presets {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+	gap: 10px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.easy-php-settings-app .eps-presets li {
+	margin: 0;
+}
+
+.easy-php-settings-app .eps-preset {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	width: 100%;
+	height: 100%;
+	padding: 13px 14px;
+	border: 1px solid var(--eps-line);
+	border-radius: var(--eps-radius);
+	background: var(--eps-surface);
+	box-shadow: var(--eps-shadow);
+	text-align: left;
+	cursor: pointer;
+	transition: border-color var(--eps-fast) var(--eps-ease), box-shadow var(--eps-fast) var(--eps-ease), transform var(--eps-fast) var(--eps-ease);
+}
+
+.easy-php-settings-app .eps-preset:hover {
+	border-color: #b8c3f2;
+	box-shadow: 0 6px 16px -10px rgba(47, 79, 216, 0.5);
+	transform: translateY(-1px);
+}
+
+.easy-php-settings-app .eps-preset:focus-visible {
+	outline: 2px solid var(--eps-accent);
+	outline-offset: 2px;
+}
+
+.easy-php-settings-app .eps-preset[aria-pressed="true"] {
+	border-color: var(--eps-accent);
+	box-shadow: inset 0 0 0 1px var(--eps-accent);
+	background: var(--eps-accent-soft);
+}
+
+.easy-php-settings-app .eps-preset__name {
+	color: var(--eps-ink);
+	font-size: 13.5px;
+	font-weight: 650;
+}
+
+.easy-php-settings-app .eps-preset__desc {
+	color: var(--eps-muted);
+	font-size: 12.5px;
+	line-height: 1.4;
+}
+
+.easy-php-settings-app .eps-preset__values {
+	margin-top: auto;
+	padding-top: 8px;
+	color: var(--eps-faint);
+	font-family: var(--eps-mono);
+	font-size: 11.5px;
+}
+
+.easy-php-settings-app .eps-presets__status {
+	min-height: 1.4em;
+	margin: 10px 0 0;
+	color: var(--eps-accent);
+	font-size: 13px;
+	font-weight: 550;
+}
+
+/* ─── Advanced (custom directives) ───────────────────────── */
+
+.easy-php-settings-app .eps-advanced {
+	padding: 0;
+}
+
+.easy-php-settings-app .eps-advanced__summary {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 18px 24px;
+	cursor: pointer;
+	list-style: none;
+}
+
+.easy-php-settings-app .eps-advanced__summary::-webkit-details-marker {
+	display: none;
+}
+
+.easy-php-settings-app .eps-advanced__summary .dashicons {
+	color: var(--eps-muted);
+	transition: transform var(--eps-fast) var(--eps-ease);
+}
+
+.easy-php-settings-app .eps-advanced[open] .eps-advanced__summary .dashicons {
+	transform: rotate(180deg);
+}
+
+.easy-php-settings-app .eps-advanced__summary:focus-visible {
+	outline: 2px solid var(--eps-accent);
+	outline-offset: -2px;
+	border-radius: var(--eps-radius);
+}
+
+.easy-php-settings-app .eps-advanced__body {
+	padding: 0 24px 22px;
+}
+
+.easy-php-settings-app .eps-advanced__body .eps-section__desc {
+	margin: 0 0 12px;
+}
+
+.easy-php-settings-app .eps-advanced .CodeMirror {
+	height: 220px;
+	border: 1px solid var(--eps-line-strong);
+	border-radius: var(--eps-radius-sm);
+	font-family: var(--eps-mono);
+	font-size: 13px;
+}
+
+/* ─── Save bar ───────────────────────────────────────────── */
+
+.easy-php-settings-app .eps-savebar {
+	position: sticky;
+	bottom: 12px;
+	z-index: 20;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 10px 10px 10px 20px;
+	border: 1px solid var(--eps-line);
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.92);
+	box-shadow: var(--eps-shadow-lift);
+	-webkit-backdrop-filter: blur(8px);
+	backdrop-filter: blur(8px);
+}
+
+.easy-php-settings-app .eps-savebar__status {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	margin: 0;
+	color: var(--eps-muted);
+	font-size: 13px;
+}
+
+.easy-php-settings-app .eps-savebar__dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--eps-line-strong);
+	transition: background-color var(--eps-fast) var(--eps-ease), box-shadow var(--eps-fast) var(--eps-ease);
+}
+
+.easy-php-settings-app .eps-savebar[data-state="dirty"] .eps-savebar__status {
+	color: var(--eps-ink);
+	font-weight: 600;
+}
+
+.easy-php-settings-app .eps-savebar[data-state="dirty"] .eps-savebar__dot {
+	background: var(--eps-accent);
+	box-shadow: 0 0 0 4px rgba(47, 79, 216, 0.16);
+}
+
+.easy-php-settings-app .easy-php-save-button {
+	min-height: 40px !important;
+	padding: 0 20px !important;
+	border: 1px solid var(--eps-accent) !important;
+	border-radius: 8px !important;
+	background: var(--eps-accent) !important;
+	box-shadow: 0 1px 2px rgba(15, 23, 41, 0.12) !important;
+	font-size: 14px !important;
+	font-weight: 600 !important;
+}
+
+.easy-php-settings-app .easy-php-save-button:hover {
+	border-color: var(--eps-accent-hover) !important;
+	background: var(--eps-accent-hover) !important;
+	transform: none !important;
+}
+
+.easy-php-settings-app .easy-php-save-button:focus-visible {
+	box-shadow: 0 0 0 3px rgba(47, 79, 216, 0.3) !important;
+}
+
+/* ─── Tools ──────────────────────────────────────────────── */
+
+.easy-php-settings-app .eps-tools {
+	margin-top: 12px !important;
+}
+
+.easy-php-settings-app .eps-tools__grid {
+	display: grid;
+	grid-template-columns: 1.6fr 1fr;
+	gap: 14px;
+	align-items: start;
+}
+
+.easy-php-settings-app .eps-tool {
+	padding: 18px 20px;
+	border: 1px solid var(--eps-line);
+	border-radius: var(--eps-radius);
+	background: var(--eps-subtle);
+}
+
+.easy-php-settings-app .eps-tool__title {
+	margin: 0 0 4px;
+	color: var(--eps-ink);
+	font-size: 14px;
+	font-weight: 650;
+}
+
+.easy-php-settings-app .eps-tool__desc {
+	margin: 0 0 14px;
+	color: var(--eps-muted);
+	font-size: 12.5px;
+	line-height: 1.5;
+}
+
+.easy-php-settings-app .eps-tool .button .dashicons {
+	margin: 3px 4px 0 -2px;
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+.easy-php-settings-app .eps-tool .easy-php-config-output.is-visible {
+	margin-top: 14px;
+}
+
+.easy-php-settings-app .eps-tool--danger {
+	border-color: #f3c9c5;
+	background: #fffafa;
+}
+
+.easy-php-settings-app .eps-button-danger {
+	border-color: var(--eps-danger) !important;
+	background: var(--eps-surface) !important;
+	color: var(--eps-danger) !important;
+}
+
+.easy-php-settings-app .eps-button-danger:hover {
+	background: var(--eps-danger-soft) !important;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+
+@media (max-width: 960px) {
+	.easy-php-settings-app .eps-row {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.easy-php-settings-app .eps-row__meta {
+		grid-column: 1 / -1;
+	}
+
+	.easy-php-settings-app .eps-tools__grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 600px) {
+	.easy-php-settings-app .eps-row {
+		grid-template-columns: 1fr;
+		gap: 12px;
+		padding-left: 16px;
+		padding-right: 16px;
+	}
+
+	.easy-php-settings-app .eps-row--toggle {
+		grid-template-columns: 1fr auto;
+	}
+
+	.easy-php-settings-app .eps-rows,
+	.easy-php-settings-app .eps-savebar.eps-savebar--inline {
+		margin-left: -16px;
+		margin-right: -16px;
+	}
+
+	.easy-php-settings-app .eps-input {
+		max-width: none;
+	}
+
+	.easy-php-settings-app .eps-savebar {
+		bottom: 8px;
+		padding-left: 14px;
+	}
+
+	.easy-php-settings-app .eps-savebar__text {
+		font-size: 12px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.easy-php-settings-app .eps-preset:hover {
+		transform: none;
+	}
+}

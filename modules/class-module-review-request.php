@@ -21,15 +21,9 @@ class Easy_Module_Review_Request extends Easy_Module_Base {
 	protected $module_description = 'Prompts the user to leave a review on WordPress.org';
 
 	/**
-	 * Minimum age (in seconds) the plugin must be installed before the prompt
-	 * is shown for the first time.
+	 * Snooze duration when the user clicks "Not now".
 	 */
-	const INITIAL_DELAY = 7 * DAY_IN_SECONDS;
-
-	/**
-	 * Snooze duration when the user clicks "Remind me later".
-	 */
-	const SNOOZE_DURATION = 7 * DAY_IN_SECONDS;
+	const SNOOZE_DURATION = 30 * DAY_IN_SECONDS;
 
 	/**
 	 * Option key that stores the review prompt state.
@@ -53,29 +47,16 @@ class Easy_Module_Review_Request extends Easy_Module_Base {
 		// plugin installed before this module was added.
 		add_action( 'admin_init', array( $this, 'maybe_seed_install_time' ) );
 
-		add_action( 'admin_notices', array( $this, 'maybe_render_popup' ) );
-		add_action( 'network_admin_notices', array( $this, 'maybe_render_popup' ) );
-
 		add_action( 'wp_ajax_easy_php_settings_review_action', array( $this, 'handle_ajax_action' ) );
 	}
 
 	public function enqueue_assets( $hook ) {
-		// Only enqueue when the popup will actually render. We test the same
-		// gate the renderer uses so we don't ship assets unnecessarily.
-		if ( ! $this->should_show_popup() ) {
+		// The prompt lives on the plugin's General tab only.
+		if ( 'tools_page_easy-php-settings' !== $hook && 'tools_page_easy-php-settings-network' !== $hook ) {
 			return;
 		}
-
-		// The main stylesheet is only registered on the plugin's own admin
-		// page; re-register it on the other screens that host the popup so
-		// the modal styles are always available.
-		if ( ! wp_style_is( 'easy-php-settings-notices', 'enqueued' ) ) {
-			wp_enqueue_style(
-				'easy-php-settings-notices',
-				plugin_dir_url( dirname( __FILE__ ) ) . 'css/admin-notices.css',
-				array( 'dashicons' ),
-				$this->plugin->get_version()
-			);
+		if ( ! $this->is_eligible() ) {
+			return;
 		}
 
 		wp_enqueue_script(
@@ -139,95 +120,59 @@ class Easy_Module_Review_Request extends Easy_Module_Base {
 	/* ─── Display logic ───────────────────────── */
 
 	/**
-	 * Decide whether the popup should render on the current admin request.
+	 * Whether the user has left the choice open (not rated, not "don't ask
+	 * again", not snoozed).
 	 *
+	 * @param array $state State with dismissed, rated and snooze_until.
+	 * @param int   $now   Current Unix time.
 	 * @return bool
 	 */
-	private function should_show_popup() {
-		if ( ! is_admin() ) {
+	public static function may_ask( array $state, $now ) {
+		if ( ! empty( $state['dismissed'] ) || ! empty( $state['rated'] ) ) {
 			return false;
 		}
-
-		if ( ! current_user_can( $this->plugin->get_capability() ) ) {
-			return false;
-		}
-
-		// Don't show during AJAX or on the network upgrade screen.
-		if ( wp_doing_ajax() ) {
-			return false;
-		}
-
-		$state = $this->get_state();
-		if ( $state['dismissed'] || $state['rated'] ) {
-			return false;
-		}
-
-		if ( $state['snooze_until'] && time() < (int) $state['snooze_until'] ) {
-			return false;
-		}
-
-		$install_time = (int) $this->plugin->get_option( self::INSTALL_TIME_OPTION );
-		if ( ! $install_time ) {
-			// Will be seeded by maybe_seed_install_time on this same request;
-			// skip until next page load to enforce the delay window.
-			return false;
-		}
-
-		if ( ( time() - $install_time ) < self::INITIAL_DELAY ) {
-			return false;
-		}
-
-		return true;
+		$snooze_until = isset( $state['snooze_until'] ) ? (int) $state['snooze_until'] : 0;
+		return $snooze_until <= $now;
 	}
 
 	/**
-	 * Render the admin notice prompting for a review.
+	 * Whether the current user may be asked on this request.
+	 *
+	 * @return bool
 	 */
-	public function maybe_render_popup() {
-		if ( ! $this->should_show_popup() ) {
+	private function is_eligible() {
+		return is_admin()
+			&& ! wp_doing_ajax()
+			&& current_user_can( $this->plugin->get_capability() )
+			&& self::may_ask( $this->get_state(), time() );
+	}
+
+	/**
+	 * Print the review request, hidden.
+	 *
+	 * The General tab reveals it only after its live check confirms that the
+	 * user's saved PHP values are really in use, i.e. the plugin has helped.
+	 *
+	 * @return void
+	 */
+	public function render_inline_prompt() {
+		if ( ! $this->is_eligible() ) {
 			return;
 		}
-
-		// Some admin pages don't trigger admin_enqueue_scripts in time
-		// (e.g. notices fire very early). Make sure the script is loaded.
-		if ( ! wp_script_is( 'easy-php-settings-review-request', 'enqueued' ) ) {
-			$this->enqueue_assets( '' );
-		}
 		?>
-		<div id="easy-php-settings-review-notice" class="notice notice-info easy-php-review-notice">
-			<div class="easy-php-review-notice-inner">
-				<div class="easy-php-review-notice-icon" aria-hidden="true">
-					<span class="dashicons dashicons-star-filled"></span>
-					<span class="dashicons dashicons-star-filled"></span>
-					<span class="dashicons dashicons-star-filled"></span>
-					<span class="dashicons dashicons-star-filled"></span>
-					<span class="dashicons dashicons-star-filled"></span>
-				</div>
-
-				<div class="easy-php-review-notice-body">
-					<p class="easy-php-review-notice-title">
-						<strong><?php esc_html_e( 'Enjoying Easy PHP Settings?', 'easy-php-settings' ); ?></strong>
-					</p>
-					<p class="easy-php-review-notice-message">
-						<?php esc_html_e( 'You\'ve been using Easy PHP Settings for a while now — awesome! Would you mind taking a moment to leave a review on WordPress.org? It would mean a lot and helps other users discover the plugin.', 'easy-php-settings' ); ?>
-					</p>
-					<p class="easy-php-review-notice-actions">
-						<button type="button" class="button button-primary easy-php-review-btn" data-review-action="rate">
-							<span class="dashicons dashicons-star-filled"></span>
-							<?php esc_html_e( 'Sure, I\'d love to!', 'easy-php-settings' ); ?>
-						</button>
-						<button type="button" class="button easy-php-review-btn" data-review-action="later">
-							<?php esc_html_e( 'Maybe later', 'easy-php-settings' ); ?>
-						</button>
-						<button type="button" class="button-link easy-php-review-btn-link" data-review-action="dismiss">
-							<?php esc_html_e( 'I already did / Don\'t show again', 'easy-php-settings' ); ?>
-						</button>
-					</p>
-				</div>
-
-				<button type="button" class="notice-dismiss easy-php-review-notice-close" data-review-action="later">
-					<span class="screen-reader-text"><?php esc_html_e( 'Dismiss this notice.', 'easy-php-settings' ); ?></span>
-				</button>
+		<div id="easy-php-settings-review-notice" class="eps-review" role="status" hidden>
+			<span class="eps-review__icon dashicons dashicons-yes-alt" aria-hidden="true"></span>
+			<div class="eps-review__body">
+				<p class="eps-review__title"><?php esc_html_e( 'Your saved PHP settings are working', 'easy-php-settings' ); ?></p>
+				<p class="eps-review__text"><?php esc_html_e( 'If Easy PHP Settings helped, a short review on WordPress.org helps other site owners find it.', 'easy-php-settings' ); ?></p>
+				<p class="eps-review__actions">
+					<button type="button" class="button button-primary" data-review-action="rate">
+						<?php esc_html_e( 'Leave a review', 'easy-php-settings' ); ?>
+						<span class="screen-reader-text"><?php esc_html_e( '(opens in a new tab)', 'easy-php-settings' ); ?></span>
+					</button>
+					<button type="button" class="button" data-review-action="later"><?php esc_html_e( 'Not now', 'easy-php-settings' ); ?></button>
+					<button type="button" class="button-link" data-review-action="dismiss"><?php esc_html_e( 'Don\'t ask again', 'easy-php-settings' ); ?></button>
+				</p>
 			</div>
 		</div>
 		<?php

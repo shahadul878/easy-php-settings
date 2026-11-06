@@ -1,0 +1,398 @@
+/* ============================================================
+   Easy PHP Settings — About tab, laid out as a CV.
+   Uses the tokens defined in admin-theme.css.
+   ============================================================ */
+
+.easy-php-settings-app .eps-cv {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+/* ─── Hero ─── */
+
+.easy-php-settings-app .eps-cv__hero {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px 32px;
+	padding: 28px 32px;
+	border: 1px solid var(--eps-line);
+	border-radius: var(--eps-radius);
+	background:
+		linear-gradient(90deg, var(--eps-accent) 0, var(--eps-accent) 4px, transparent 4px),
+		var(--eps-surface);
+	box-shadow: var(--eps-shadow);
+}
+
+.easy-php-settings-app .eps-cv__identity {
+	display: flex;
+	align-items: center;
+	gap: 22px;
+	min-width: 0;
+}
+
+.easy-php-settings-app .eps-cv__monogram {
+	display: grid;
+	flex: none;
+	place-items: center;
+	width: 84px;
+	height: 84px;
+	border-radius: 50%;
+	background: var(--eps-ink);
+	box-shadow: 0 0 0 4px var(--eps-surface), 0 0 0 6px var(--eps-accent-soft);
+	color: #fff;
+	font-family: Georgia, "Times New Roman", serif;
+	font-size: 30px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+}
+
+.easy-php-settings-app .eps-cv__name {
+	margin: 0;
+	padding: 0;
+	color: var(--eps-ink);
+	font-size: 28px;
+	font-weight: 700;
+	line-height: 1.15;
+	letter-spacing: -0.015em;
+}
+
+.easy-php-settings-app .eps-cv__role {
+	margin: 6px 0 0;
+	color: var(--eps-accent);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.easy-php-settings-app .eps-cv__availability {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 10px 0 0;
+	color: var(--eps-muted);
+	font-size: 13px;
+}
+
+.easy-php-settings-app .eps-cv__dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #16a34a;
+	box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.15);
+}
+
+.easy-php-settings-app .eps-cv__cta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.easy-php-settings-app .eps-cv .eps-cv__hire,
+.easy-php-settings-app .eps-cv .eps-cv__secondary {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 42px;
+	padding: 0 20px;
+	border-radius: 8px;
+	box-shadow: none;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1;
+}
+
+.easy-php-settings-app .eps-cv .eps-cv__hire {
+	border-color: var(--eps-accent);
+	background: var(--eps-accent);
+	color: #fff;
+}
+
+.easy-php-settings-app .eps-cv .eps-cv__hire:hover,
+.easy-php-settings-app .eps-cv .eps-cv__hire:focus {
+	border-color: var(--eps-accent-hover);
+	background: var(--eps-accent-hover);
+	color: #fff;
+}
+
+.easy-php-settings-app .eps-cv .eps-cv__hire .dashicons {
+	width: 18px;
+	height: 18px;
+	margin: 0;
+	color: inherit !important;
+	font-size: 18px;
+}
+
+.easy-php-settings-app .eps-cv .eps-cv__secondary {
+	border-color: var(--eps-line-strong);
+	background: var(--eps-surface);
+	color: var(--eps-ink);
+}
+
+.easy-php-settings-app .eps-cv .eps-cv__secondary:hover {
+	border-color: var(--eps-ink);
+	color: var(--eps-ink);
+}
+
+.easy-php-settings-app .eps-cv a:focus-visible {
+	outline: 2px solid var(--eps-accent);
+	outline-offset: 2px;
+	box-shadow: none;
+}
+
+/* ─── Two-column body ─── */
+
+.easy-php-settings-app .eps-cv__grid {
+	display: grid;
+	grid-template-columns: 280px minmax(0, 1fr);
+	gap: 20px;
+	align-items: start;
+}
+
+.easy-php-settings-app .eps-cv__side,
+.easy-php-settings-app .eps-cv__main {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.easy-php-settings-app .eps-cv__block {
+	padding: 22px 24px;
+	border: 1px solid var(--eps-line);
+	border-radius: var(--eps-radius);
+	background: var(--eps-surface);
+	box-shadow: var(--eps-shadow);
+}
+
+.easy-php-settings-app .eps-cv__heading {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0 0 14px;
+	padding: 0;
+	color: var(--eps-faint);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.easy-php-settings-app .eps-cv__heading::after {
+	content: "";
+	flex: 1;
+	height: 1px;
+	background: var(--eps-line);
+}
+
+.easy-php-settings-app .eps-cv__lead {
+	margin: 0;
+	color: var(--eps-text);
+	font-size: 15px;
+	line-height: 1.65;
+}
+
+/* Facts (contact, plugin) */
+.easy-php-settings-app .eps-cv__facts {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin: 0;
+}
+
+.easy-php-settings-app .eps-cv__facts dt {
+	margin: 0 0 2px;
+	color: var(--eps-faint);
+	font-size: 12px;
+}
+
+.easy-php-settings-app .eps-cv__facts dd {
+	margin: 0;
+	color: var(--eps-ink);
+	font-size: 13.5px;
+	font-weight: 500;
+	word-break: break-word;
+}
+
+.easy-php-settings-app .eps-cv__facts a,
+.easy-php-settings-app .eps-cv__links a {
+	color: var(--eps-accent);
+	text-decoration: none;
+}
+
+.easy-php-settings-app .eps-cv__facts a:hover,
+.easy-php-settings-app .eps-cv__links a:hover {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+/* Skills */
+.easy-php-settings-app .eps-cv__tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.easy-php-settings-app .eps-cv__tags li {
+	margin: 0;
+	padding: 4px 10px;
+	border: 1px solid var(--eps-line);
+	border-radius: 999px;
+	background: var(--eps-subtle);
+	color: var(--eps-text);
+	font-size: 12.5px;
+	font-weight: 500;
+}
+
+/* Services */
+.easy-php-settings-app .eps-cv__services {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.easy-php-settings-app .eps-cv__services li {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin: 0;
+	padding: 14px 16px;
+	border-left: 3px solid var(--eps-accent);
+	border-radius: 0 var(--eps-radius-sm) var(--eps-radius-sm) 0;
+	background: var(--eps-subtle);
+}
+
+.easy-php-settings-app .eps-cv__services strong {
+	color: var(--eps-ink);
+	font-size: 14px;
+}
+
+.easy-php-settings-app .eps-cv__services span {
+	color: var(--eps-muted);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+/* Selected work */
+.easy-php-settings-app .eps-cv__work-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 4px 12px;
+}
+
+.easy-php-settings-app .eps-cv__work h4 {
+	margin: 0;
+	color: var(--eps-ink);
+	font-size: 16px;
+	font-weight: 650;
+}
+
+.easy-php-settings-app .eps-cv__work-meta {
+	color: var(--eps-faint);
+	font-size: 12.5px;
+}
+
+.easy-php-settings-app .eps-cv__work p {
+	margin: 8px 0 0;
+	color: var(--eps-text);
+	font-size: 13.5px;
+	line-height: 1.6;
+}
+
+.easy-php-settings-app .eps-cv__links span {
+	margin: 0 6px;
+	color: var(--eps-faint);
+}
+
+/* Closing call to action */
+.easy-php-settings-app .eps-cv__block--callout {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	border-color: transparent;
+	background:
+		radial-gradient(120% 160% at 100% 0%, rgba(47, 79, 216, 0.4) 0%, rgba(47, 79, 216, 0) 60%),
+		var(--eps-ink);
+	color: #c9d2e6;
+}
+
+.easy-php-settings-app .eps-cv__block--callout .eps-cv__heading {
+	margin-bottom: 6px;
+	color: #fff;
+	font-size: 16px;
+	font-weight: 650;
+	letter-spacing: 0;
+	text-transform: none;
+}
+
+.easy-php-settings-app .eps-cv__block--callout .eps-cv__heading::after {
+	display: none;
+}
+
+.easy-php-settings-app .eps-cv__block--callout p {
+	margin: 0;
+	font-size: 13.5px;
+}
+
+/* Privacy panel keeps its own markup; just give it the same spacing. */
+.easy-php-settings-app .eps-cv #plugin-tracker-consent-panel {
+	padding: 22px 24px;
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 960px) {
+	.easy-php-settings-app .eps-cv__grid {
+		grid-template-columns: 1fr;
+	}
+
+	.easy-php-settings-app .eps-cv__side {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	}
+}
+
+@media (max-width: 600px) {
+	.easy-php-settings-app .eps-cv__hero {
+		padding: 22px 18px;
+	}
+
+	.easy-php-settings-app .eps-cv__identity {
+		align-items: flex-start;
+		gap: 16px;
+	}
+
+	.easy-php-settings-app .eps-cv__monogram {
+		width: 60px;
+		height: 60px;
+		font-size: 22px;
+	}
+
+	.easy-php-settings-app .eps-cv__name {
+		font-size: 22px;
+	}
+
+	.easy-php-settings-app .eps-cv__cta,
+	.easy-php-settings-app .eps-cv__cta .button {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.easy-php-settings-app .eps-cv__services {
+		grid-template-columns: 1fr;
+	}
+
+	.easy-php-settings-app .eps-cv__block {
+		padding: 18px 16px;
+	}
+}

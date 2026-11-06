@@ -26,79 +26,61 @@ class Easy_Module_About extends Easy_Module_Base {
 		);
 	}
 
+	/**
+	 * Address the "Hire me" buttons write to.
+	 */
+	const HIRE_EMAIL = 'shahadul.islam1@gmail.com';
+
+	/**
+	 * Profile shown on the About tab.
+	 *
+	 * @return array
+	 */
+	private function profile() {
+		$hire_url = add_query_arg(
+			array(
+				'subject' => rawurlencode( __( 'Project enquiry (via Easy PHP Settings)', 'easy-php-settings' ) ),
+			),
+			'mailto:' . self::HIRE_EMAIL
+		);
+
+		return array(
+			'name'            => 'H M Shahadul Islam',
+			'initials'        => 'HS',
+			'role'            => __( 'WordPress Developer & Plugin Creator', 'easy-php-settings' ),
+			'summary'         => __( 'I build WordPress plugins that help businesses grow and make WordPress easier to run. I care about clean, secure, user-friendly code that follows WordPress coding standards and best practices.', 'easy-php-settings' ),
+			'email'           => self::HIRE_EMAIL,
+			'hire_url'        => $hire_url,
+			'github_url'      => 'https://github.com/shahadul878',
+			'github_label'    => 'github.com/shahadul878',
+			'plugin_repo_url' => 'https://github.com/shahadul878/easy-php-settings',
+			'issues_url'      => 'https://github.com/shahadul878/easy-php-settings/issues',
+			'reviews_url'     => Easy_Module_Review_Request::REVIEW_URL,
+			'version'         => $this->plugin->get_version(),
+			'skills'          => array( 'PHP', 'WordPress', 'JavaScript', 'jQuery', 'CSS3', 'REST API', 'WP-CLI', 'PHPUnit', 'Git', 'SVN' ),
+			'services'        => array(
+				array(
+					'title' => __( 'Custom plugins', 'easy-php-settings' ),
+					'text'  => __( 'New features built as standalone, maintainable WordPress plugins.', 'easy-php-settings' ),
+				),
+				array(
+					'title' => __( 'Server and PHP tuning', 'easy-php-settings' ),
+					'text'  => __( 'Memory, upload and timeout limits, debugging and error logs.', 'easy-php-settings' ),
+				),
+				array(
+					'title' => __( 'Fixes and code review', 'easy-php-settings' ),
+					'text'  => __( 'Tracking down errors and bringing code up to WordPress standards.', 'easy-php-settings' ),
+				),
+				array(
+					'title' => __( 'WordPress.org releases', 'easy-php-settings' ),
+					'text'  => __( 'Preparing plugins for review, readme files and SVN deployment.', 'easy-php-settings' ),
+				),
+			),
+		);
+	}
+
 	public function render_tab() {
-		$version = $this->plugin->get_version();
-		?>
-		<div id="about-tab" class="easy-php-about-container">
-			<div class="easy-php-about-header-card">
-				<div class="easy-php-about-avatar">
-					<img src="<?php echo esc_url( plugin_dir_url( dirname( __FILE__ ) ) . 'images/author-avatar.svg' ); ?>" alt="<?php esc_attr_e( 'H M Shahadul Islam', 'easy-php-settings' ); ?>" width="120" height="120">
-				</div>
-				<div class="easy-php-about-info">
-					<h2 class="easy-php-about-name"><?php esc_html_e( 'H M Shahadul Islam', 'easy-php-settings' ); ?></h2>
-					<p class="easy-php-about-title"><?php esc_html_e( 'WordPress Developer & Plugin Creator', 'easy-php-settings' ); ?></p>
-					<p class="easy-php-about-description"><?php esc_html_e( 'Passionate about creating useful WordPress plugins that help businesses grow and improve their WordPress experience. I believe in clean, secure, and user-friendly code that follows WordPress best practices.', 'easy-php-settings' ); ?></p>
-				</div>
-			</div>
-
-			<div class="easy-php-about-card">
-				<h3 class="easy-php-about-card-title"><span class="dashicons dashicons-share"></span> <?php esc_html_e( 'Connect With Me', 'easy-php-settings' ); ?></h3>
-				<div class="easy-php-about-contact-links">
-					<a href="https://github.com/shahadul878" target="_blank" rel="noopener" class="easy-php-about-contact-link"><span class="dashicons dashicons-admin-links"></span><span><?php esc_html_e( 'GitHub', 'easy-php-settings' ); ?></span><span class="easy-php-link-url">github.com/shahadul878</span></a>
-					<a href="mailto:shahadul.islam1@gmail.com" class="easy-php-about-contact-link"><span class="dashicons dashicons-email"></span><span><?php esc_html_e( 'Email', 'easy-php-settings' ); ?></span><span class="easy-php-link-url">shahadul.islam1@gmail.com</span></a>
-					<a href="https://github.com/shahadul878" target="_blank" rel="noopener" class="easy-php-about-contact-link"><span class="dashicons dashicons-admin-site"></span><span><?php esc_html_e( 'Website', 'easy-php-settings' ); ?></span><span class="easy-php-link-url">github.com/shahadul878</span></a>
-				</div>
-			</div>
-
-			<div class="easy-php-about-card">
-				<h3 class="easy-php-about-card-title"><span class="dashicons dashicons-info"></span> <?php esc_html_e( 'Plugin Information', 'easy-php-settings' ); ?></h3>
-				<div class="easy-php-about-plugin-info">
-					<div class="easy-php-info-row"><span class="easy-php-info-label"><?php esc_html_e( 'Version:', 'easy-php-settings' ); ?></span><span class="easy-php-info-value"><?php echo esc_html( $version ); ?></span></div>
-					<div class="easy-php-info-row"><span class="easy-php-info-label"><?php esc_html_e( 'Author:', 'easy-php-settings' ); ?></span><span class="easy-php-info-value">H M Shahadul Islam</span></div>
-					<div class="easy-php-info-row"><span class="easy-php-info-label"><?php esc_html_e( 'License:', 'easy-php-settings' ); ?></span><span class="easy-php-info-value">GPL-2.0+</span></div>
-					<div class="easy-php-info-row"><span class="easy-php-info-label"><?php esc_html_e( 'Contributors:', 'easy-php-settings' ); ?></span><span class="easy-php-info-value">shahadul878, codereyes</span></div>
-				</div>
-			</div>
-
-			<div class="easy-php-about-card">
-				<h3 class="easy-php-about-card-title"><span class="dashicons dashicons-admin-tools"></span> <?php esc_html_e( 'Technologies Used', 'easy-php-settings' ); ?></h3>
-				<div class="easy-php-tech-stack">
-					<span class="easy-php-tech-tag">PHP</span>
-					<span class="easy-php-tech-tag">WordPress</span>
-					<span class="easy-php-tech-tag">JavaScript</span>
-					<span class="easy-php-tech-tag">CSS3</span>
-					<span class="easy-php-tech-tag">jQuery</span>
-					<span class="easy-php-tech-tag">SVN</span>
-					<span class="easy-php-tech-tag">Git</span>
-				</div>
-			</div>
-
-			<div class="easy-php-about-card">
-				<h3 class="easy-php-about-card-title"><span class="dashicons dashicons-groups"></span> <?php esc_html_e( 'Credits & Acknowledgments', 'easy-php-settings' ); ?></h3>
-				<div class="easy-php-about-section">
-					<p><?php esc_html_e( 'This plugin is built with care and attention to WordPress coding standards and best practices. Special thanks to the WordPress community for their continuous support and feedback.', 'easy-php-settings' ); ?></p>
-					<p><?php esc_html_e( 'If you find this plugin useful, please consider leaving a review or contributing to its development on GitHub.', 'easy-php-settings' ); ?></p>
-				</div>
-			</div>
-
-			<?php if ( function_exists( 'tracker_integration_render_consent_panel' ) ) : ?>
-			<div class="easy-php-about-card">
-				<h3 class="easy-php-about-card-title"><span class="dashicons dashicons-privacy"></span> <?php esc_html_e( 'Privacy & Data Sharing', 'easy-php-settings' ); ?></h3>
-				<?php tracker_integration_render_consent_panel(); ?>
-			</div>
-			<?php endif; ?>
-
-			<div class="easy-php-about-card">
-				<h3 class="easy-php-about-card-title"><span class="dashicons dashicons-sos"></span> <?php esc_html_e( 'Support & Feedback', 'easy-php-settings' ); ?></h3>
-				<div class="easy-php-about-section">
-					<p><?php esc_html_e( 'Need help or have suggestions? I\'d love to hear from you!', 'easy-php-settings' ); ?></p>
-					<div class="easy-php-about-actions">
-						<a href="https://github.com/shahadul878/easy-php-settings/issues" target="_blank" rel="noopener" class="button button-primary"><span class="dashicons dashicons-format-chat"></span> <?php esc_html_e( 'Report an Issue', 'easy-php-settings' ); ?></a>
-						<a href="https://github.com/shahadul878/easy-php-settings" target="_blank" rel="noopener" class="button button-secondary"><span class="dashicons dashicons-star-filled"></span> <?php esc_html_e( 'Star on GitHub', 'easy-php-settings' ); ?></a>
-					</div>
-				</div>
-			</div>
-		</div>
-		<?php
+		$about = $this->profile();
+		include plugin_dir_path( __DIR__ ) . 'view/about-tab.php';
 	}
 }

@@ -36,49 +36,47 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		register_setting( 'easy_php_settings', 'easy_php_settings_settings', array( $this, 'sanitize_callback' ) );
 		register_setting( 'easy_php_settings', 'easy_php_settings_wp_memory_settings', array( $this, 'sanitize_wp_memory_callback' ) );
 
-		add_settings_section(
-			'easy_php_settings_section',
-			__( 'PHP Configuration Settings', 'easy-php-settings' ),
-			function () {
-				echo '<p>' . esc_html__( 'Configure PHP settings to optimize your WordPress site performance.', 'easy-php-settings' ) . '</p>';
-			},
-			'easy_php_settings'
-		);
-
-		$labels = array(
-			'memory_limit'        => __( 'Memory Limit', 'easy-php-settings' ),
-			'upload_max_filesize' => __( 'Upload Max Filesize', 'easy-php-settings' ),
-			'post_max_size'       => __( 'Post Max Size', 'easy-php-settings' ),
-			'max_execution_time'  => __( 'Max Execution Time', 'easy-php-settings' ),
-			'max_input_vars'      => __( 'Max Input Vars', 'easy-php-settings' ),
-		);
-
-		foreach ( $this->plugin->get_settings_keys() as $key ) {
-			add_settings_field(
-				$key,
-				$labels[ $key ] ?? ucwords( str_replace( array( '_', '.' ), ' ', $key ) ),
-				array( $this, 'render_setting_field' ),
-				'easy_php_settings',
-				'easy_php_settings_section',
-				array( 'key' => $key )
-			);
-		}
-
 		$this->apply_settings();
 	}
 
 	/* ─── Sanitize Callbacks ──────────────────── */
 
 	public function sanitize_callback( $input ) {
-		$old_input = $this->plugin->get_option( 'easy_php_settings_settings', array() );
-
 		// Defense-in-depth capability check: WP's options.php already enforces
 		// it for the registered settings group, but the sanitize callback can
 		// fire from other code paths (filters, WP-CLI option write, REST).
 		if ( ! current_user_can( $this->plugin->get_capability() ) ) {
-			return $old_input;
+			return $this->plugin->get_option( 'easy_php_settings_settings', array() );
 		}
 
+		return $this->process_php_settings( is_array( $input ) ? $input : array() );
+	}
+
+	/**
+	 * Save PHP settings outside the Settings API (used by WP-CLI).
+	 *
+	 * The caller is responsible for authorisation. Messages are reported
+	 * through add_settings_error().
+	 *
+	 * @param array $input Full settings array to save.
+	 * @return array The saved settings.
+	 */
+	public function save_php_settings( array $input ) {
+		$new_input = $this->process_php_settings( $input );
+		// Avoid a second pass through the sanitize callback if it is registered.
+		remove_filter( 'sanitize_option_easy_php_settings_settings', array( $this, 'sanitize_callback' ) );
+		$this->plugin->update_option( 'easy_php_settings_settings', $new_input );
+		return $new_input;
+	}
+
+	/**
+	 * Sanitize and validate PHP settings, record history, and write INI files.
+	 *
+	 * @param array $input Raw settings.
+	 * @return array Sanitized settings.
+	 */
+	private function process_php_settings( array $input ) {
+		$old_input = $this->plugin->get_option( 'easy_php_settings_settings', array() );
 		$new_input = array();
 
 		foreach ( $this->plugin->get_settings_keys() as $key ) {
@@ -123,12 +121,37 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 	}
 
 	public function sanitize_wp_memory_callback( $input ) {
-		$old_input = $this->plugin->get_option( 'easy_php_settings_wp_memory_settings', array() );
-
 		if ( ! current_user_can( $this->plugin->get_capability() ) ) {
-			return $old_input;
+			return $this->plugin->get_option( 'easy_php_settings_wp_memory_settings', array() );
 		}
 
+		return $this->process_wp_memory_settings( is_array( $input ) ? $input : array() );
+	}
+
+	/**
+	 * Save WordPress memory settings outside the Settings API (used by WP-CLI).
+	 *
+	 * The caller is responsible for authorisation. Messages are reported
+	 * through add_settings_error().
+	 *
+	 * @param array $input Full WordPress memory settings array to save.
+	 * @return array The saved settings.
+	 */
+	public function save_wp_memory_settings( array $input ) {
+		$new_input = $this->process_wp_memory_settings( $input );
+		remove_filter( 'sanitize_option_easy_php_settings_wp_memory_settings', array( $this, 'sanitize_wp_memory_callback' ) );
+		$this->plugin->update_option( 'easy_php_settings_wp_memory_settings', $new_input );
+		return $new_input;
+	}
+
+	/**
+	 * Sanitize and validate WordPress memory settings and update wp-config.php.
+	 *
+	 * @param array $input Raw settings.
+	 * @return array Sanitized settings.
+	 */
+	private function process_wp_memory_settings( array $input ) {
+		$old_input = $this->plugin->get_option( 'easy_php_settings_wp_memory_settings', array() );
 		$new_input = array();
 
 		foreach ( $this->plugin->get_wp_memory_settings_keys() as $key ) {
@@ -205,13 +228,15 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		if ( is_wp_error( $result ) ) {
 			Easy_Error_Handler::add_settings_error( 'easy_php_settings_settings', 'config_files_error', $result->get_error_message(), 'error' );
 		} elseif ( ! empty( $result ) && is_array( $result ) ) {
+			$this->plugin->get_live_check()->mark_saved();
 			add_settings_error(
 				'easy_php_settings_settings',
 				'config_files_created',
 				sprintf(
-					/* translators: %s: comma-separated list of written file names */
-					__( 'Settings saved and written to: %s. Please restart your web server for changes to take effect.', 'easy-php-settings' ),
-					implode( ', ', $result )
+					/* translators: 1: comma-separated list of written file names, 2: seconds PHP caches .user.ini for */
+					__( 'Settings saved and written to: %1$s. PHP applies .user.ini changes within %2$d seconds; the "In use" values show when they take effect.', 'easy-php-settings' ),
+					implode( ', ', $result ),
+					(int) ini_get( 'user_ini.cache_ttl' )
 				),
 				'updated'
 			);
@@ -347,14 +372,14 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 				'easy_php_settings_settings',
 				'files_deleted_success',
 				sprintf(
-					/* translators: %s: comma-separated list of deleted file names */
-					__( 'Successfully deleted: %s.', 'easy-php-settings' ),
+					/* translators: %s: comma-separated list of cleaned file names */
+					__( 'Removed Easy PHP Settings directives from: %s.', 'easy-php-settings' ),
 					implode( ', ', $result )
 				),
 				'success'
 			);
 		} else {
-			add_settings_error( 'easy_php_settings_settings', 'files_deleted_error', __( 'Could not delete INI files. They may not exist or have permission issues.', 'easy-php-settings' ), 'warning' );
+			add_settings_error( 'easy_php_settings_settings', 'files_deleted_error', __( 'No Easy PHP Settings directives were found to remove, or the files could not be changed. Check file permissions.', 'easy-php-settings' ), 'warning' );
 		}
 	}
 
@@ -368,160 +393,9 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 		);
 	}
 
-	/* ─── Field Renderers ─────────────────────── */
-
-	public function render_setting_field( $args ) {
-		$options       = $this->plugin->get_option( 'easy_php_settings_settings' );
-		$key           = $args['key'];
-		$value         = isset( $options[ $key ] ) ? $options[ $key ] : '';
-		$current_value = ini_get( $key );
-		$all_settings  = ini_get_all();
-		$recommended   = $this->plugin->get_recommended_values();
-		$access        = $all_settings[ $key ]['access'] ?? 0;
-		$is_changeable = ( INI_USER === $access || INI_ALL === $access );
-		$tooltips      = $this->plugin->get_tooltips();
-		$tooltip       = isset( $tooltips[ $key ] ) ? $tooltips[ $key ] : '';
-
-		$field_id   = 'easy_php_settings_' . esc_attr( $key );
-		$aria_label = sprintf(
-			/* translators: %s: PHP setting name */
-			__( 'Enter value for %s', 'easy-php-settings' ),
-			$key
-		);
-
-		$aria_desc = $field_id . '_description';
-		if ( $tooltip ) {
-			$aria_desc = $field_id . '_help ' . $aria_desc;
-		}
-		echo '<span class="easy-php-field-wrap">';
-		echo "<input type='text' id='" . esc_attr( $field_id ) . "' name='easy_php_settings_settings[" . esc_attr( $key ) . "]' value='" . esc_attr( $value ) . "' class='regular-text' placeholder='" . esc_attr( $recommended[ $key ] ?? '' ) . "' aria-label='" . esc_attr( $aria_label ) . "' aria-describedby='" . esc_attr( $aria_desc ) . "'>";
-		if ( $tooltip ) {
-			echo '<span id="' . esc_attr( $field_id ) . '_help" class="dashicons dashicons-editor-help easy-php-help-icon" title="' . esc_attr( $tooltip ) . '" aria-label="' . esc_attr__( 'Help', 'easy-php-settings' ) . '"></span>';
-		}
-		echo '</span>';
-
-		$this->render_status_indicator( $key, $current_value, $recommended );
-
-		if ( ! $is_changeable ) {
-			echo '<p class="description easy-php-runtime-warning">' . esc_html__( 'This setting cannot be changed at runtime. Use the configuration generator below.', 'easy-php-settings' ) . '</p>';
-			$this->show_alternative_instructions( $key, $recommended );
-		}
-	}
-
-	public function render_wp_memory_field( $args ) {
-		$options       = $this->plugin->get_option( 'easy_php_settings_wp_memory_settings' );
-		$key           = $args['key'];
-		$value         = isset( $options[ $key ] ) ? $options[ $key ] : '';
-		$current_value = $this->get_wp_memory_value( $key );
-		$recommended   = $this->plugin->get_wp_memory_recommended_values();
-		$tooltips      = $this->plugin->get_tooltips();
-		$tooltip       = isset( $tooltips[ $key ] ) ? $tooltips[ $key ] : '';
-
-		$field_id   = 'easy_php_settings_wp_memory_' . esc_attr( $key );
-		$aria_label = sprintf(
-			/* translators: %s: WordPress memory constant name */
-			__( 'Enter value for %s', 'easy-php-settings' ),
-			$key
-		);
-
-		$aria_desc = $field_id . '_description';
-		if ( $tooltip ) {
-			$aria_desc = $field_id . '_help ' . $aria_desc;
-		}
-		echo '<span class="easy-php-field-wrap">';
-		echo "<input type='text' id='" . esc_attr( $field_id ) . "' name='easy_php_settings_wp_memory_settings[" . esc_attr( $key ) . "]' value='" . esc_attr( $value ) . "' class='regular-text' placeholder='" . esc_attr( $recommended[ $key ] ?? '' ) . "' aria-label='" . esc_attr( $aria_label ) . "' aria-describedby='" . esc_attr( $aria_desc ) . "'>";
-		if ( $tooltip ) {
-			echo '<span id="' . esc_attr( $field_id ) . '_help" class="dashicons dashicons-editor-help easy-php-help-icon" title="' . esc_attr( $tooltip ) . '" aria-label="' . esc_attr__( 'Help', 'easy-php-settings' ) . '"></span>';
-		}
-		echo '</span>';
-
-		$this->render_memory_status_indicator( $key, $current_value, $recommended );
-	}
-
-	/* ─── Status Indicators ───────────────────── */
-
-	/**
-	 * Get status label and CSS class for a setting value vs recommended.
-	 * Returns: 'low' | 'ok' | 'high' (too high / warning).
-	 */
-	private function get_status_for_value( $key, $current_value, $recommended ) {
-		if ( ! isset( $recommended[ $key ] ) ) {
-			return null;
-		}
-		$rec = $recommended[ $key ];
-		$is_size = in_array( $key, array( 'memory_limit', 'upload_max_filesize', 'post_max_size', 'wp_memory_limit', 'wp_max_memory_limit' ), true );
-		$current_bytes = $is_size ? $this->plugin->convert_to_bytes( $current_value ) : (int) $current_value;
-		$rec_bytes     = $is_size ? $this->plugin->convert_to_bytes( $rec ) : (int) $rec;
-
-		if ( $current_bytes < $rec_bytes ) {
-			return 'low';
-		}
-		$threshold = $is_size ? 1.5 : 2;
-		if ( $rec_bytes > 0 && $current_bytes > $rec_bytes * $threshold ) {
-			return 'high';
-		}
-		return 'ok';
-	}
-
-	private function render_status_indicator( $key, $current_value, $recommended ) {
-		$field_id    = 'easy_php_settings_' . esc_attr( $key );
-		$description = sprintf(
-			/* translators: %s: current PHP setting value */
-			esc_html__( 'Current value: %s', 'easy-php-settings' ),
-			esc_html( $current_value )
-		);
-
-		if ( isset( $recommended[ $key ] ) ) {
-			$rec  = $recommended[ $key ];
-			$desc = sprintf(
-				/* translators: %s: recommended PHP setting value */
-				esc_html__( ' | Recommended: %s', 'easy-php-settings' ),
-				esc_html( $rec )
-			);
-			$status = $this->get_status_for_value( $key, $current_value, $recommended );
-			if ( 'low' === $status ) {
-				$description .= $desc . ' <span class="status-badge status-low" aria-label="' . esc_attr__( 'Low value', 'easy-php-settings' ) . '">' . esc_html__( 'Low', 'easy-php-settings' ) . '</span>';
-			} elseif ( 'high' === $status ) {
-				$description .= $desc . ' <span class="status-badge status-high" aria-label="' . esc_attr__( 'Higher than recommended', 'easy-php-settings' ) . '">' . esc_html__( 'Higher than recommended', 'easy-php-settings' ) . '</span>';
-			} else {
-				$description .= $desc . ' <span class="status-badge status-ok" aria-label="' . esc_attr__( 'OK', 'easy-php-settings' ) . '">' . esc_html__( 'OK', 'easy-php-settings' ) . '</span>';
-			}
-		}
-
-		echo '<p class="description" id="' . esc_attr( $field_id ) . '_description" role="status">' . wp_kses_post( $description ) . '</p>';
-	}
-
-	private function render_memory_status_indicator( $key, $current_value, $recommended ) {
-		$field_id    = 'easy_php_settings_wp_memory_' . esc_attr( $key );
-		$description = sprintf(
-			/* translators: %s: current WordPress memory value */
-			esc_html__( 'Current value: %s', 'easy-php-settings' ),
-			esc_html( $current_value )
-		);
-
-		if ( isset( $recommended[ $key ] ) ) {
-			$rec  = $recommended[ $key ];
-			$desc = sprintf(
-				/* translators: %s: recommended WordPress memory value */
-				esc_html__( ' | Recommended: %s', 'easy-php-settings' ),
-				esc_html( $rec )
-			);
-			$status = $this->get_status_for_value( $key, $current_value, $recommended );
-			if ( 'low' === $status ) {
-				$description .= $desc . ' <span class="status-badge status-low" aria-label="' . esc_attr__( 'Low value', 'easy-php-settings' ) . '">' . esc_html__( 'Low', 'easy-php-settings' ) . '</span>';
-			} elseif ( 'high' === $status ) {
-				$description .= $desc . ' <span class="status-badge status-high" aria-label="' . esc_attr__( 'Higher than recommended', 'easy-php-settings' ) . '">' . esc_html__( 'Higher than recommended', 'easy-php-settings' ) . '</span>';
-			} else {
-				$description .= $desc . ' <span class="status-badge status-ok" aria-label="' . esc_attr__( 'OK', 'easy-php-settings' ) . '">' . esc_html__( 'OK', 'easy-php-settings' ) . '</span>';
-			}
-		}
-
-		echo '<p class="description" id="' . esc_attr( $field_id ) . '_description" role="status">' . wp_kses_post( $description ) . '</p>';
-	}
-
 	/* ─── Helpers ─────────────────────────────── */
 
-	private function get_wp_memory_value( $key ) {
+	public function get_wp_memory_value( $key ) {
 		switch ( $key ) {
 			case 'wp_memory_limit':
 				return defined( 'WP_MEMORY_LIMIT' ) ? WP_MEMORY_LIMIT : '40M';
@@ -564,149 +438,159 @@ class Easy_Module_General_Settings extends Easy_Module_Base {
 
 	/* ─── Tab Rendering ───────────────────────── */
 
+	/**
+	 * Human labels for each setting.
+	 *
+	 * @return array<string, string>
+	 */
+	private function get_field_labels() {
+		return array(
+			'memory_limit'        => __( 'Memory limit', 'easy-php-settings' ),
+			'upload_max_filesize' => __( 'Max upload size', 'easy-php-settings' ),
+			'post_max_size'       => __( 'Max POST size', 'easy-php-settings' ),
+			'max_execution_time'  => __( 'Max execution time', 'easy-php-settings' ),
+			'max_input_vars'      => __( 'Max input vars', 'easy-php-settings' ),
+			'wp_memory_limit'     => __( 'WordPress memory', 'easy-php-settings' ),
+			'wp_max_memory_limit' => __( 'WordPress admin memory', 'easy-php-settings' ),
+		);
+	}
+
+	/**
+	 * Placeholder hint describing the expected unit.
+	 *
+	 * @param string $key Setting key.
+	 * @return string
+	 */
+	private function get_unit_hint( $key ) {
+		if ( 'max_execution_time' === $key ) {
+			return __( 'seconds', 'easy-php-settings' );
+		}
+		if ( 'max_input_vars' === $key ) {
+			return __( 'count', 'easy-php-settings' );
+		}
+		return __( 'e.g. 256M', 'easy-php-settings' );
+	}
+
+	/**
+	 * Build the view data for one group of setting rows.
+	 *
+	 * @param string[] $keys        Setting keys.
+	 * @param string   $option      Option the values are stored in.
+	 * @param array    $recommended Recommended values.
+	 * @param callable $live_value  Returns the value in effect for a key.
+	 * @return array[]
+	 */
+	private function build_rows( array $keys, $option, array $recommended, callable $live_value ) {
+		$saved    = $this->plugin->get_option( $option, array() );
+		$saved    = is_array( $saved ) ? $saved : array();
+		$labels   = $this->get_field_labels();
+		$tooltips = $this->plugin->get_tooltips();
+		$rows     = array();
+
+		foreach ( $keys as $key ) {
+			$value = isset( $saved[ $key ] ) ? (string) $saved[ $key ] : '';
+			$live  = (string) call_user_func( $live_value, $key );
+			$rows[] = array(
+				'key'         => $key,
+				'id'          => 'eps-field-' . $key,
+				'name'        => $option . '[' . $key . ']',
+				'label'       => isset( $labels[ $key ] ) ? $labels[ $key ] : $key,
+				'help'        => isset( $tooltips[ $key ] ) ? $tooltips[ $key ] : '',
+				'value'       => $value,
+				'live'        => $live,
+				'recommended' => isset( $recommended[ $key ] ) ? $recommended[ $key ] : '',
+				'unit_hint'   => $this->get_unit_hint( $key ),
+				'health'      => Easy_Limit_Health::status( $key, $live, isset( $recommended[ $key ] ) ? $recommended[ $key ] : '' ),
+				'applied'     => Easy_Limit_Health::applied_state( $key, $value, $live ),
+			);
+		}
+
+		return $rows;
+	}
+
 	public function render_tab() {
-		$options    = $this->plugin->get_option( 'easy_php_settings_settings' );
-		$presets    = $this->plugin->get_presets();
-		?>
-		<form action="options.php" method="post">
-			<?php settings_fields( 'easy_php_settings' ); ?>
+		$options = $this->plugin->get_option( 'easy_php_settings_settings', array() );
+		$view    = array(
+			'presets'    => $this->plugin->get_presets(),
+			'php_rows'   => $this->php_view_rows(),
+			'wp_rows'    => $this->build_rows(
+				$this->plugin->get_wp_memory_settings_keys(),
+				'easy_php_settings_wp_memory_settings',
+				$this->plugin->get_wp_memory_recommended_values(),
+				array( $this, 'get_wp_memory_value' )
+			),
+			'custom_ini' => is_array( $options ) && isset( $options['custom_php_ini'] ) ? (string) $options['custom_php_ini'] : '',
+			'cache_ttl'  => (int) ini_get( 'user_ini.cache_ttl' ),
+			'review'     => $this->plugin->get_module_manager()->get_module( 'review_request' ),
+		);
 
-			<div class="easy-php-settings-preset-box">
-				<h3><span class="dashicons dashicons-admin-settings"></span> <?php esc_html_e( 'Quick Configuration Presets', 'easy-php-settings' ); ?></h3>
-				<p class="easy-php-card__desc"><?php esc_html_e( 'Select a pre-configured optimization profile to instantly apply recommended settings for your specific use case.', 'easy-php-settings' ); ?></p>
-				<label for="easy_php_settings_preset" class="easy-php-field-label"><?php esc_html_e( 'Choose a Preset:', 'easy-php-settings' ); ?></label>
-				<select id="easy_php_settings_preset">
-					<option value=""><?php esc_html_e( '-- Select a Preset Configuration --', 'easy-php-settings' ); ?></option>
-					<?php foreach ( $presets as $pk => $pd ) : ?>
-						<option value="<?php echo esc_attr( $pk ); ?>"><?php echo esc_html( $pd['name'] ); ?> &mdash; <?php echo esc_html( $pd['description'] ); ?></option>
-					<?php endforeach; ?>
-				</select>
-			</div>
+		include plugin_dir_path( dirname( __FILE__ ) ) . 'view/general-settings-tab.php';
+	}
 
-			<div class="easy-php-settings-config-box">
-				<h3><span class="dashicons dashicons-editor-code"></span> <?php esc_html_e( 'Custom PHP Configuration', 'easy-php-settings' ); ?></h3>
-				<p class="easy-php-card__desc"><?php esc_html_e( 'Add any additional PHP directives here. These will be included in the generated .user.ini and php.ini files.', 'easy-php-settings' ); ?></p>
-				<textarea name="easy_php_settings_settings[custom_php_ini]" id="easy_php_settings_custom_php_ini" rows="10" placeholder="<?php esc_attr_e( '; Add custom PHP directives here', 'easy-php-settings' ); ?>"><?php echo isset( $options['custom_php_ini'] ) ? esc_textarea( $options['custom_php_ini'] ) : ''; ?></textarea>
-			</div>
+	/**
+	 * View rows for the PHP settings, using the values in the current request.
+	 *
+	 * @return array[]
+	 */
+	public function php_view_rows() {
+		return $this->build_rows(
+			$this->plugin->get_settings_keys(),
+			'easy_php_settings_settings',
+			$this->plugin->get_recommended_values(),
+			function ( $key ) {
+				return (string) ini_get( $key );
+			}
+		);
+	}
 
-			<div class="easy-php-settings-config-box">
-				<h3><span class="dashicons dashicons-performance"></span> <?php esc_html_e( 'Core PHP Settings', 'easy-php-settings' ); ?></h3>
-				<?php do_settings_sections( 'easy_php_settings' ); ?>
-			</div>
+	/**
+	 * Print the "In use" cell for one row.
+	 *
+	 * @param array $row    Row from build_rows().
+	 * @param bool  $is_php True for PHP INI settings, false for wp-config.php constants.
+	 * @return void
+	 */
+	public function render_row_state( array $row, $is_php ) {
+		$health_labels = array(
+			Easy_Limit_Health::LOW  => __( 'Below recommended', 'easy-php-settings' ),
+			Easy_Limit_Health::OK   => __( 'Recommended range', 'easy-php-settings' ),
+			Easy_Limit_Health::HIGH => __( 'Above recommended', 'easy-php-settings' ),
+		);
+		$cache_ttl     = (int) ini_get( 'user_ini.cache_ttl' );
 
-			<div class="easy-php-settings-config-box">
-				<h3><span class="dashicons dashicons-wordpress"></span> <?php esc_html_e( 'WordPress Memory Configuration', 'easy-php-settings' ); ?></h3>
-				<table class="form-table">
-					<tr>
-						<th scope="row"><label for="wp_memory_limit"><?php esc_html_e( 'WP_MEMORY_LIMIT', 'easy-php-settings' ); ?></label></th>
-						<td><?php $this->render_wp_memory_field( array( 'key' => 'wp_memory_limit' ) ); ?></td>
-					</tr>
-					<tr>
-						<th scope="row"><label for="wp_max_memory_limit"><?php esc_html_e( 'WP_MAX_MEMORY_LIMIT', 'easy-php-settings' ); ?></label></th>
-						<td><?php $this->render_wp_memory_field( array( 'key' => 'wp_max_memory_limit' ) ); ?></td>
-					</tr>
-				</table>
-			</div>
+		include plugin_dir_path( dirname( __FILE__ ) ) . 'view/partials/setting-state.php';
+	}
 
-			<div class="easy-php-settings-actions">
-				<div class="easy-php-settings-actions__inner">
-					<p class="easy-php-settings-actions__hint">
-						<span class="dashicons dashicons-info-outline" aria-hidden="true"></span>
-						<?php esc_html_e( 'Saves PHP limits, custom directives, and WordPress memory settings to your configuration files.', 'easy-php-settings' ); ?>
-					</p>
-					<button type="submit" name="submit" id="easy-php-settings-save-button" class="easy-php-save-button button button-primary button-large">
-						<span class="easy-php-save-button__icon dashicons dashicons-saved" aria-hidden="true"></span>
-						<span class="easy-php-save-button__label"><?php esc_html_e( 'Save All Settings', 'easy-php-settings' ); ?></span>
-					</button>
-				</div>
-			</div>
-		</form>
+	/**
+	 * "In use" cells for every PHP setting, keyed by setting, as HTML.
+	 *
+	 * Used by the REST live check, which runs without the plugin's ini_set()
+	 * calls and so shows the values PHP really uses.
+	 *
+	 * @return array<string, array{applied: string, html: string}>
+	 */
+	public function render_php_states() {
+		$states = array();
+		foreach ( $this->php_view_rows() as $row ) {
+			ob_start();
+			$this->render_row_state( $row, true );
+			$states[ $row['key'] ] = array(
+				'applied' => $row['applied'],
+				'html'    => (string) ob_get_clean(),
+			);
+		}
+		return $states;
+	}
 
-		<div class="easy-php-utility-section">
-			<div class="easy-php-utility-section__header">
-				<h2><?php esc_html_e( 'Advanced Tools', 'easy-php-settings' ); ?></h2>
-				<p><?php esc_html_e( 'Generate configs, validate runtime changes, or remove plugin-created files when needed.', 'easy-php-settings' ); ?></p>
-			</div>
-
-			<div class="easy-php-utility-grid">
-				<div class="easy-php-utility-card easy-php-utility-card--generator">
-					<div class="easy-php-utility-card__head">
-						<span class="easy-php-utility-card__icon easy-php-utility-card__icon--blue" aria-hidden="true">
-							<span class="dashicons dashicons-media-code"></span>
-						</span>
-						<div class="easy-php-utility-card__copy">
-							<h3><?php esc_html_e( 'Configuration Generator', 'easy-php-settings' ); ?></h3>
-							<p><?php esc_html_e( 'Preview .user.ini and .htaccess snippets from your current form values before saving.', 'easy-php-settings' ); ?></p>
-						</div>
-					</div>
-					<div class="easy-php-utility-card__actions">
-						<button type="button" id="generate-config" class="easy-php-utility-btn easy-php-utility-btn--primary">
-							<span class="dashicons dashicons-admin-generic" aria-hidden="true"></span>
-							<?php esc_html_e( 'Generate Configuration Files', 'easy-php-settings' ); ?>
-						</button>
-					</div>
-					<div id="config-output" class="easy-php-config-output easy-php-utility-card__body">
-						<h4><?php esc_html_e( 'Generated Configuration', 'easy-php-settings' ); ?></h4>
-						<div class="easy-php-config-block">
-							<label><?php esc_html_e( '.user.ini', 'easy-php-settings' ); ?></label>
-							<textarea id="user-ini-content" readonly></textarea>
-							<button type="button" class="easy-php-utility-btn easy-php-utility-btn--ghost easy-php-copy-config" data-target="user-ini-content">
-								<span class="dashicons dashicons-admin-page" aria-hidden="true"></span>
-								<?php esc_html_e( 'Copy to Clipboard', 'easy-php-settings' ); ?>
-							</button>
-						</div>
-						<div class="easy-php-config-block" id="htaccess-block">
-							<label><?php esc_html_e( '.htaccess (Apache)', 'easy-php-settings' ); ?></label>
-							<textarea id="htaccess-content" readonly></textarea>
-							<button type="button" class="easy-php-utility-btn easy-php-utility-btn--ghost easy-php-copy-config" data-target="htaccess-content">
-								<span class="dashicons dashicons-admin-page" aria-hidden="true"></span>
-								<?php esc_html_e( 'Copy to Clipboard', 'easy-php-settings' ); ?>
-							</button>
-						</div>
-					</div>
-				</div>
-
-				<div class="easy-php-utility-card easy-php-utility-card--test">
-					<div class="easy-php-utility-card__head">
-						<span class="easy-php-utility-card__icon easy-php-utility-card__icon--green" aria-hidden="true">
-							<span class="dashicons dashicons-yes-alt"></span>
-						</span>
-						<div class="easy-php-utility-card__copy">
-							<h3><?php esc_html_e( 'Test Settings', 'easy-php-settings' ); ?></h3>
-							<p><?php esc_html_e( 'Check whether your PHP limits can be changed at runtime on this server.', 'easy-php-settings' ); ?></p>
-						</div>
-					</div>
-					<div class="easy-php-utility-card__actions">
-						<button type="button" id="test-settings" class="easy-php-utility-btn easy-php-utility-btn--secondary">
-							<span class="dashicons dashicons-controls-play" aria-hidden="true"></span>
-							<?php esc_html_e( 'Run Settings Test', 'easy-php-settings' ); ?>
-						</button>
-					</div>
-					<div id="test-results" class="easy-php-test-results easy-php-utility-card__body" hidden></div>
-				</div>
-			</div>
-
-			<div class="easy-php-utility-card easy-php-utility-card--danger">
-				<div class="easy-php-utility-card__head">
-					<span class="easy-php-utility-card__icon easy-php-utility-card__icon--red" aria-hidden="true">
-						<span class="dashicons dashicons-warning"></span>
-					</span>
-					<div class="easy-php-utility-card__copy">
-						<h3><?php esc_html_e( 'Danger Zone', 'easy-php-settings' ); ?></h3>
-						<p><?php esc_html_e( 'Remove .user.ini and php.ini files created by this plugin to revert to server defaults.', 'easy-php-settings' ); ?></p>
-					</div>
-				</div>
-				<div class="easy-php-utility-card__actions">
-					<form action="" method="post" class="easy-php-delete-form">
-						<?php wp_nonce_field( 'easy_php_settings_delete_ini_nonce' ); ?>
-						<button type="submit" name="easy_php_settings_delete_ini_files" class="easy-php-utility-btn easy-php-utility-btn--danger no-loading" onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to delete the .user.ini and php.ini files created by this plugin?', 'easy-php-settings' ) ); ?>');">
-							<span class="dashicons dashicons-trash" aria-hidden="true"></span>
-							<?php esc_html_e( 'Delete .ini Files', 'easy-php-settings' ); ?>
-						</button>
-					</form>
-				</div>
-			</div>
-		</div>
-		<?php
+	/**
+	 * Render the manual-configuration snippets for one setting.
+	 *
+	 * Called from the view for settings the server is not using yet.
+	 *
+	 * @param string $key Setting key.
+	 * @return void
+	 */
+	public function render_manual_instructions( $key ) {
+		$this->show_alternative_instructions( $key, $this->plugin->get_recommended_values() );
 	}
 }

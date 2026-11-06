@@ -6,7 +6,7 @@
  * administrator has explicitly opted in. No data is sent by default.
  *
  * @package PluginTrackerIntegration
- * @version 1.1.8
+ * @version 1.1.9
  * @author H M Shahadul Islam
  * @license GPL-2.0+
  */
@@ -740,7 +740,7 @@ add_action(
 			'easy-php-settings-tracker-widget',
 			plugins_url( 'css/tracker-widget.css', dirname( __DIR__ ) . '/class-easy-php-settings.php' ),
 			array( 'dashicons' ),
-			defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.8'
+			defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.9'
 		);
 	}
 );
@@ -954,7 +954,7 @@ function tracker_integration_enqueue_offer_notice_assets() {
 	}
 
 	$plugin_file = dirname( __DIR__ ) . '/class-easy-php-settings.php';
-	$version     = defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.8';
+	$version     = defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.9';
 	$offer       = $active['offer'];
 	$offer_id    = isset( $offer['id'] ) ? (string) $offer['id'] : '';
 	$offer_link  = tracker_integration_safe_offer_link( isset( $offer['link'] ) ? $offer['link'] : '' );
@@ -1222,44 +1222,70 @@ function tracker_integration_render_optin_notice() {
 	$fields      = tracker_integration_get_disclosure_fields();
 	?>
 	<div class="notice notice-info plugin-tracker-optin-notice">
-		<p style="margin:0.5em 0 0.25em;">
-			<strong><?php esc_html_e( 'Easy PHP Settings — optional data sharing', 'easy-php-settings' ); ?></strong>
-		</p>
-		<p style="margin:0.25em 0;">
-			<?php
-			printf(
-				/* translators: %s: third-party service URL */
-				esc_html__( 'You may optionally share site information with Plugin Tracker (CodeEyes) at %s to receive plugin support updates and service offers. Data sharing is disabled by default.', 'easy-php-settings' ),
-				'https://plugin.codereyes.com/'
-			);
-			?>
-		</p>
-		<p style="margin:0.25em 0;"><strong><?php esc_html_e( 'If you opt in, the following data may be sent:', 'easy-php-settings' ); ?></strong></p>
-		<ul style="list-style:disc;margin:0.25em 0 0.5em 1.5em;">
-			<?php foreach ( $fields as $field ) : ?>
-				<li><?php echo esc_html( $field ); ?></li>
-			<?php endforeach; ?>
-		</ul>
-		<p style="margin:0.25em 0 0.75em;">
-			<?php esc_html_e( 'When sent: once when you opt in, then at most once per week via a scheduled task, at most once per hour during admin use, after plugin updates, and once on deactivation if you had opted in. Purpose: improve plugin support and related services.', 'easy-php-settings' ); ?>
-		</p>
-		<p style="margin:0.25em 0 0.75em;">
-			<a href="<?php echo esc_url( PLUGIN_TRACKER_PRIVACY_URL ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Privacy Policy', 'easy-php-settings' ); ?></a>
-			&nbsp;|&nbsp;
-			<a href="<?php echo esc_url( PLUGIN_TRACKER_TERMS_URL ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Terms of Service', 'easy-php-settings' ); ?></a>
-		</p>
-		<p style="margin:0 0 0.75em;">
-			<form method="post" action="" style="display:inline;margin-right:6px;">
-				<?php wp_nonce_field( 'plugin_tracker_consent', 'plugin_tracker_consent_nonce' ); ?>
-				<input type="hidden" name="plugin_tracker_consent_action" value="grant" />
-				<button type="submit" class="button button-primary"><?php esc_html_e( 'Allow data sharing', 'easy-php-settings' ); ?></button>
-			</form>
-			<a class="button" href="<?php echo esc_url( $about_url ); ?>#plugin-tracker-consent-panel"><?php esc_html_e( 'Learn more', 'easy-php-settings' ); ?></a>
-			<a class="button" href="<?php echo esc_url( $decline_url ); ?>"><?php esc_html_e( 'No thanks', 'easy-php-settings' ); ?></a>
-		</p>
+		<div class="plugin-tracker-optin">
+			<div class="plugin-tracker-optin__text">
+				<p class="plugin-tracker-optin__lead">
+					<strong><?php esc_html_e( 'Easy PHP Settings: optional data sharing', 'easy-php-settings' ); ?></strong>
+					<?php esc_html_e( 'Off by default. If you allow it, the details below are sent to our tracker for plugin support updates and service offers.', 'easy-php-settings' ); ?>
+				</p>
+				<details class="plugin-tracker-optin__more">
+					<summary><?php esc_html_e( 'Learn more', 'easy-php-settings' ); ?></summary>
+					<p>
+						<strong><?php esc_html_e( 'Sent if you allow:', 'easy-php-settings' ); ?></strong>
+						<?php echo esc_html( implode( ' · ', $fields ) ); ?>
+					</p>
+					<p><?php esc_html_e( 'When sent: once when you opt in, then at most once per week via a scheduled task, at most once per hour during admin use, after plugin updates, and once on deactivation if you had opted in. Purpose: improve plugin support and related services.', 'easy-php-settings' ); ?></p>
+					<p>
+						<?php esc_html_e( 'You can turn it off at any time under Tools → Easy PHP Settings → About.', 'easy-php-settings' ); ?>
+						<a href="<?php echo esc_url( $about_url ); ?>#plugin-tracker-consent-panel"><?php esc_html_e( 'Open data-sharing settings', 'easy-php-settings' ); ?></a>
+					</p>
+					<p class="plugin-tracker-optin__links">
+						<a href="<?php echo esc_url( PLUGIN_TRACKER_PRIVACY_URL ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Privacy Policy', 'easy-php-settings' ); ?></a>
+						<span aria-hidden="true">·</span>
+						<a href="<?php echo esc_url( PLUGIN_TRACKER_TERMS_URL ); ?>" target="_blank" rel="noopener"><?php esc_html_e( 'Terms of Service', 'easy-php-settings' ); ?></a>
+					</p>
+				</details>
+			</div>
+			<div class="plugin-tracker-optin__actions">
+				<form method="post" action="">
+					<?php wp_nonce_field( 'plugin_tracker_consent', 'plugin_tracker_consent_nonce' ); ?>
+					<input type="hidden" name="plugin_tracker_consent_action" value="grant" />
+					<button type="submit" class="button button-primary"><?php esc_html_e( 'Allow data sharing', 'easy-php-settings' ); ?></button>
+				</form>
+				<a class="button" href="<?php echo esc_url( $decline_url ); ?>"><?php esc_html_e( 'No thanks', 'easy-php-settings' ); ?></a>
+			</div>
+		</div>
 	</div>
 	<?php
 }
+
+/**
+ * Styles for the compact opt-in notice.
+ *
+ * The notice can appear on any admin screen, so the rules ride on the
+ * always-loaded "common" admin stylesheet instead of the plugin's own CSS.
+ */
+function tracker_integration_optin_notice_styles() {
+	if ( ! tracker_integration_should_show_optin_notice() ) {
+		return;
+	}
+	$css = '.plugin-tracker-optin{display:flex;flex-wrap:wrap;align-items:center;gap:10px 24px;padding:10px 0}'
+		. '.plugin-tracker-optin__text{flex:1 1 420px;min-width:0}'
+		. '.plugin-tracker-optin__text p{margin:0;padding:0}'
+		. '.plugin-tracker-optin__lead{font-size:13px;line-height:1.5}'
+		. '.plugin-tracker-optin__fields{margin-top:4px!important;color:#50575e;font-size:12px;line-height:1.5}'
+		. '.plugin-tracker-optin__more{margin-top:4px;color:#50575e;font-size:12px}'
+		. '.plugin-tracker-optin__more summary{width:max-content;color:#2271b1;cursor:pointer}'
+		. '.plugin-tracker-optin__more p{max-width:760px;margin-top:6px!important;line-height:1.5}'
+		. '.plugin-tracker-optin__links{margin-top:4px!important;font-size:12px}'
+		. '.plugin-tracker-optin__links span{margin:0 6px;color:#8c8f94}'
+		. '.plugin-tracker-optin__actions{display:flex;flex:none;align-items:center;gap:8px}'
+		. '.plugin-tracker-optin__actions form{margin:0}'
+		. '.plugin-tracker-optin .plugin-tracker-optin__actions .button{min-height:30px;height:30px;padding:0 12px;border-radius:4px;box-shadow:none;font-size:12.5px;line-height:28px}';
+	wp_add_inline_style( 'common', $css );
+}
+add_action( 'admin_enqueue_scripts', 'tracker_integration_optin_notice_styles' );
+
 add_action( 'admin_notices', 'tracker_integration_render_optin_notice' );
 add_action( 'network_admin_notices', 'tracker_integration_render_optin_notice' );
 

@@ -27,7 +27,23 @@ class Easy_Module_Status extends Easy_Module_Base {
 	}
 
 	public function render_tab() {
-		$all_settings  = ini_get_all();
+		$change_badges = array(
+			Easy_Ini_Change_Method::USER_INI => array(
+				'tone'  => 'success',
+				'label' => __( 'This plugin (.user.ini)', 'easy-php-settings' ),
+				'hint'  => __( 'Set it on the General tab. The plugin writes it to .user.ini, which this server reads.', 'easy-php-settings' ),
+			),
+			Easy_Ini_Change_Method::HTACCESS => array(
+				'tone'  => 'warning',
+				'label' => __( '.htaccess', 'easy-php-settings' ),
+				'hint'  => __( 'This server does not read .user.ini. Copy the .htaccess snippet from the General tab into your .htaccess file.', 'easy-php-settings' ),
+			),
+			Easy_Ini_Change_Method::HOST => array(
+				'tone'  => 'danger',
+				'label' => __( 'Host only', 'easy-php-settings' ),
+				'hint'  => __( 'Only your host can change this, in the server php.ini.', 'easy-php-settings' ),
+			),
+		);
 		$settings_keys = $this->plugin->get_settings_keys();
 		$recommended   = $this->plugin->get_recommended_values();
 		$wp_mem_keys   = $this->plugin->get_wp_memory_settings_keys();
@@ -59,25 +75,21 @@ class Easy_Module_Status extends Easy_Module_Base {
 							<th scope="col"><?php esc_html_e( 'Setting', 'easy-php-settings' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Current Value', 'easy-php-settings' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Recommended', 'easy-php-settings' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'Changeable', 'easy-php-settings' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'How to change it', 'easy-php-settings' ); ?></th>
 						</tr></thead>
 						<tbody>
 						<?php foreach ( $settings_keys as $key ) :
 							$current = ini_get( $key );
 							$rec     = $recommended[ $key ] ?? 'N/A';
-							$access  = $all_settings[ $key ]['access'] ?? 0;
-							$ok      = ( INI_USER === $access || INI_ALL === $access );
+							$method  = Easy_Ini_Change_Method::for_setting( $key );
+							$badge   = isset( $change_badges[ $method ] ) ? $change_badges[ $method ] : $change_badges[ Easy_Ini_Change_Method::HOST ];
 						?>
 						<tr>
 							<td><code><?php echo esc_html( $key ); ?></code></td>
 							<td><?php echo esc_html( $current ); ?></td>
 							<td><?php echo esc_html( $rec ); ?></td>
 							<td>
-								<?php if ( $ok ) : ?>
-									<span class="easy-php-badge easy-php-badge--success"><?php esc_html_e( 'Yes', 'easy-php-settings' ); ?></span>
-								<?php else : ?>
-									<span class="easy-php-badge easy-php-badge--danger"><?php esc_html_e( 'No', 'easy-php-settings' ); ?></span>
-								<?php endif; ?>
+								<span class="easy-php-badge easy-php-badge--<?php echo esc_attr( $badge['tone'] ); ?>" title="<?php echo esc_attr( $badge['hint'] ); ?>"><?php echo esc_html( $badge['label'] ); ?></span>
 							</td>
 						</tr>
 						<?php endforeach; ?>

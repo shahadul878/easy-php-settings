@@ -18,6 +18,16 @@ class Easy_Module_Tools extends Easy_Module_Base {
 	protected $module_name        = 'Tools';
 	protected $module_description = 'Debugging settings, log viewer, export/import, and reset tools';
 
+	/**
+	 * How much of the end of debug.log to read.
+	 */
+	const LOG_TAIL_BYTES = 262144;
+
+	/**
+	 * Most distinct errors to list in the viewer.
+	 */
+	const LOG_MAX_GROUPS = 200;
+
 	/* ─── Hooks ───────────────────────────────── */
 
 	public function register_hooks() {
@@ -68,26 +78,32 @@ class Easy_Module_Tools extends Easy_Module_Base {
 				'sanitize_callback' => array( $this, 'update_wp_config_constants' ),
 			)
 		);
+	}
 
-		add_settings_section(
-			'easy_php_settings_debugging_section',
-			__( 'Debugging Constants', 'easy-php-settings' ),
-			function () {
-				echo '<p>' . esc_html__( 'Control WordPress debugging constants defined in wp-config.php.', 'easy-php-settings' ) . '</p>';
-			},
-			'easy_php_settings_debugging'
+	/**
+	 * Debugging switches with a plain-language description of each.
+	 *
+	 * @return array<string, array{label: string, help: string}>
+	 */
+	private function get_debugging_fields() {
+		return array(
+			'wp_debug'         => array(
+				'label' => __( 'Debug mode', 'easy-php-settings' ),
+				'help'  => __( 'Turns on WordPress debug mode. The switches below only work while this is on.', 'easy-php-settings' ),
+			),
+			'wp_debug_log'     => array(
+				'label' => __( 'Log errors to a file', 'easy-php-settings' ),
+				'help'  => __( 'Writes errors to wp-content/debug.log. You can read it in the log viewer below.', 'easy-php-settings' ),
+			),
+			'wp_debug_display' => array(
+				'label' => __( 'Show errors on screen', 'easy-php-settings' ),
+				'help'  => __( 'Prints errors into pages. Visitors can see them, so keep this off on a live site.', 'easy-php-settings' ),
+			),
+			'script_debug'     => array(
+				'label' => __( 'Unminified core scripts', 'easy-php-settings' ),
+				'help'  => __( 'Loads the full, readable versions of WordPress CSS and JavaScript. Useful when debugging scripts.', 'easy-php-settings' ),
+			),
 		);
-
-		$fields = array(
-			'wp_debug'         => 'WP_DEBUG',
-			'wp_debug_log'     => 'WP_DEBUG_LOG',
-			'wp_debug_display' => 'WP_DEBUG_DISPLAY',
-			'script_debug'     => 'SCRIPT_DEBUG',
-		);
-
-		foreach ( $fields as $name => $label ) {
-			add_settings_field( $name, $label, array( $this, 'render_debugging_field' ), 'easy_php_settings_debugging', 'easy_php_settings_debugging_section', array( 'name' => $name ) );
-		}
 	}
 
 	/* ─── Debugging Field Renderer ────────────── */
@@ -98,13 +114,13 @@ class Easy_Module_Tools extends Easy_Module_Base {
 		$is_disabled = ( 'wp_debug' !== $name && ! ( defined( 'WP_DEBUG' ) && WP_DEBUG ) );
 
 		$html  = '<label class="switch">';
-		$html .= '<input type="checkbox" name="easy_php_settings_debugging_settings[' . esc_attr( $name ) . ']" value="1" ' . checked( 1, $is_defined, false ) . ' ' . disabled( $is_disabled, true, false ) . '>';
+		$html .= '<input type="checkbox" id="eps-debug-' . esc_attr( $name ) . '" name="easy_php_settings_debugging_settings[' . esc_attr( $name ) . ']" value="1" ' . checked( 1, $is_defined, false ) . ' ' . disabled( $is_disabled, true, false ) . '>';
 		$html .= '<span class="slider round"></span>';
 		$html .= '</label>';
 
 		echo wp_kses( $html, array(
 			'label' => array( 'class' => array() ),
-			'input' => array( 'type' => array(), 'name' => array(), 'value' => array(), 'checked' => array(), 'disabled' => array() ),
+			'input' => array( 'type' => array(), 'id' => array(), 'name' => array(), 'value' => array(), 'checked' => array(), 'disabled' => array() ),
 			'span'  => array( 'class' => array() ),
 		) );
 	}
@@ -119,6 +135,32 @@ class Easy_Module_Tools extends Easy_Module_Base {
 			return get_option( 'easy_php_settings_debugging_settings', array() );
 		}
 
+		return $this->write_debug_constants( is_array( $input ) ? $input : array() );
+	}
+
+	/**
+	 * Save debugging constants outside the Settings API (used by WP-CLI).
+	 *
+	 * The caller is responsible for authorisation. Messages are reported
+	 * through add_settings_error().
+	 *
+	 * @param array $input Keys present (wp_debug, wp_debug_log, wp_debug_display, script_debug) are turned on; missing keys are turned off.
+	 * @return array The saved debugging settings.
+	 */
+	public function save_debug_settings( array $input ) {
+		$new_options = $this->write_debug_constants( $input );
+		remove_filter( 'sanitize_option_easy_php_settings_debugging_settings', array( $this, 'update_wp_config_constants' ) );
+		update_option( 'easy_php_settings_debugging_settings', $new_options );
+		return $new_options;
+	}
+
+	/**
+	 * Write the debugging constants to wp-config.php.
+	 *
+	 * @param array $input Keys present are turned on; missing keys are turned off.
+	 * @return array Debugging settings to store.
+	 */
+	private function write_debug_constants( array $input ) {
 		global $wp_filesystem;
 		if ( ! $wp_filesystem ) {
 			require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -128,7 +170,7 @@ class Easy_Module_Tools extends Easy_Module_Base {
 		$config_path = ABSPATH . 'wp-config.php';
 		if ( ! $wp_filesystem->is_writable( $config_path ) ) {
 			Easy_Error_Handler::add_settings_error( 'easy_php_settings_debugging_settings', 'config_not_writable', __( 'wp-config.php is not writable.', 'easy-php-settings' ), 'error' );
-			return get_option( 'easy_php_settings_debugging_settings' );
+			return get_option( 'easy_php_settings_debugging_settings', array() );
 		}
 
 		$backup = Easy_Config_Backup::create_backup();
@@ -179,6 +221,8 @@ class Easy_Module_Tools extends Easy_Module_Base {
 		} catch ( Exception $e ) {
 			Easy_Error_Handler::handle_exception( $e, 'update_wp_config_constants' );
 			Easy_Error_Handler::add_settings_error( 'easy_php_settings_debugging_settings', 'config_update_error', __( 'Failed to update wp-config.php. Please check error log.', 'easy-php-settings' ), 'error' );
+			// wp-config.php was not changed, so keep the stored state in step with it.
+			return get_option( 'easy_php_settings_debugging_settings', array() );
 		}
 
 		return $new_options;
@@ -401,24 +445,38 @@ class Easy_Module_Tools extends Easy_Module_Base {
 	public function render_tab() {
 		?>
 		<div id="tools-tab">
-			<div class="easy-php-settings-config-box">
-				<h3><span class="dashicons dashicons-admin-tools"></span> <?php esc_html_e( 'WordPress Debugging Settings', 'easy-php-settings' ); ?></h3>
-				<p class="easy-php-card__desc"><?php esc_html_e( 'Control WordPress debugging constants defined in wp-config.php.', 'easy-php-settings' ); ?></p>
-				<form action="options.php" method="post">
-					<?php
-					settings_fields( 'easy_php_settings_debugging' );
-					do_settings_sections( 'easy_php_settings_debugging' );
-					?>
-					<div class="easy-php-settings-save-wrapper">
-						<div class="easy-php-settings-save-box">
-							<button type="submit" name="submit" id="easy-php-settings-debug-save-button" class="easy-php-save-button button button-primary button-large">
-								<span class="easy-php-save-button__icon dashicons dashicons-saved" aria-hidden="true"></span>
-								<span class="easy-php-save-button__label"><?php esc_html_e( 'Save Debugging Settings', 'easy-php-settings' ); ?></span>
-							</button>
-						</div>
+			<section class="eps-section" aria-labelledby="eps-debug-title">
+				<div class="eps-section__head">
+					<p class="eps-kicker"><?php esc_html_e( 'Written to wp-config.php (backed up first)', 'easy-php-settings' ); ?></p>
+					<h2 class="eps-section__title" id="eps-debug-title"><?php esc_html_e( 'WordPress debugging', 'easy-php-settings' ); ?></h2>
+				</div>
+				<form action="options.php" method="post" class="eps-form">
+					<?php settings_fields( 'easy_php_settings_debugging' ); ?>
+					<div class="eps-rows">
+						<?php foreach ( $this->get_debugging_fields() as $name => $field ) : ?>
+							<div class="eps-row eps-row--toggle">
+								<div class="eps-row__meta">
+									<label class="eps-row__label" for="eps-debug-<?php echo esc_attr( $name ); ?>"><?php echo esc_html( $field['label'] ); ?></label>
+									<code class="eps-row__key"><?php echo esc_html( strtoupper( $name ) ); ?></code>
+									<p class="eps-row__help"><?php echo esc_html( $field['help'] ); ?></p>
+								</div>
+								<div class="eps-row__control">
+									<?php $this->render_debugging_field( array( 'name' => $name ) ); ?>
+								</div>
+							</div>
+						<?php endforeach; ?>
+					</div>
+					<div class="eps-savebar eps-savebar--inline">
+						<p class="eps-savebar__status">
+							<?php esc_html_e( 'The other switches need WP_DEBUG on. Save after turning it on to unlock them.', 'easy-php-settings' ); ?>
+						</p>
+						<button type="submit" name="submit" id="easy-php-settings-debug-save-button" class="easy-php-save-button button button-primary button-large">
+							<span class="easy-php-save-button__icon dashicons dashicons-saved" aria-hidden="true"></span>
+							<span class="easy-php-save-button__label"><?php esc_html_e( 'Save debugging', 'easy-php-settings' ); ?></span>
+						</button>
 					</div>
 				</form>
-			</div>
+			</section>
 
 			<div class="easy-php-settings-config-box">
 				<h3><span class="dashicons dashicons-visibility"></span> <?php esc_html_e( 'Debug Log Viewer', 'easy-php-settings' ); ?></h3>
@@ -484,7 +542,7 @@ class Easy_Module_Tools extends Easy_Module_Base {
 		$log_file       = WP_CONTENT_DIR . '/debug.log';
 		$log_content    = '';
 		$total_size     = 0;
-		$tail_threshold = 65536; // 64 KB.
+		$tail_threshold = self::LOG_TAIL_BYTES;
 		$truncated      = false;
 
 		if ( $wp_filesystem->exists( $log_file ) && $wp_filesystem->is_readable( $log_file ) ) {
@@ -534,8 +592,9 @@ class Easy_Module_Tools extends Easy_Module_Base {
 					if ( $truncated ) {
 						echo esc_html(
 							sprintf(
-								/* translators: %s: file size */
-								__( 'Showing last 64 KB of %s', 'easy-php-settings' ),
+								/* translators: 1: amount read, 2: file size */
+								__( 'Reading the last %1$s of %2$s', 'easy-php-settings' ),
+								size_format( self::LOG_TAIL_BYTES ),
 								size_format( $total_size )
 							)
 						);
@@ -546,7 +605,13 @@ class Easy_Module_Tools extends Easy_Module_Base {
 				</span>
 			<?php endif; ?>
 		</form>
-		<textarea id="easy_php_settings-log-viewer" rows="18" readonly><?php echo esc_textarea( $log_content ); ?></textarea>
 		<?php
+		if ( '' === $log_content ) {
+			return;
+		}
+		$groups     = Easy_Debug_Log_Parser::group( Easy_Debug_Log_Parser::parse( $log_content ) );
+		$counts     = Easy_Debug_Log_Parser::count_by_level( $groups );
+		$max_groups = self::LOG_MAX_GROUPS;
+		include plugin_dir_path( dirname( __FILE__ ) ) . 'view/partials/log-viewer.php';
 	}
 }

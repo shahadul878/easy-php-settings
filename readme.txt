@@ -4,7 +4,7 @@ Contributors: shahadul878,codereyes
 Tags: php settings, ini, performance, debug, wp-config
 Requires at least: 5.0
 Tested up to: 7.1
-Stable tag: 1.1.8
+Stable tag: 1.1.9
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -32,6 +32,7 @@ Easy PHP Settings provides a user-friendly interface to view and manage crucial 
 *   **Live Status Checker:** A dedicated "Status" tab shows your current server environment, including PHP version, server software, and a comparison of current vs. recommended PHP values.
 *   **WordPress Debugging:** A "Debugging" tab with on/off switches lets you easily toggle `WP_DEBUG`, `WP_DEBUG_LOG`, `WP_DEBUG_DISPLAY`, and `SCRIPT_DEBUG` constants in your `wp-config.php` file.
 *   **Multisite Compatible:** On multisite networks, settings are managed at the network level by Super Admins.
+*   **WP-CLI Command:** Manage settings from the terminal with `wp easy-php list`, `get`, `set`, `debug on|off`, and `remove-ini`. Changes go through the same validation, backups, and history as the admin screen.
 
 This plugin is perfect for developers and site administrators who want a quick and safe way to view and adjust their site's technical settings.
 
@@ -110,7 +111,19 @@ Some PHP settings are locked at the server level for security or performance rea
 
 = Where are the .user.ini and php.ini files saved? =
 
-When you save settings, the plugin automatically creates these files in the root directory of your WordPress installation (the same directory where `wp-config.php` is located).
+When you save settings, the plugin automatically creates these files in the root directory of your WordPress installation (the same directory where `wp-config.php` is located). It writes only between `; BEGIN Easy PHP Settings` and `; END Easy PHP Settings` lines, so content added by other plugins (such as a firewall) is kept.
+
+= Can I manage settings with WP-CLI? =
+
+Yes. Examples:
+
+`wp easy-php list` shows saved and recommended values.
+`wp easy-php set memory_limit 512M` saves a PHP setting and writes the INI files.
+`wp easy-php set wp_memory_limit 256M` updates `WP_MEMORY_LIMIT` in `wp-config.php` (backed up first).
+`wp easy-php debug on` turns on `WP_DEBUG` and `WP_DEBUG_LOG` without showing errors to visitors. Add `--display` or `--script-debug` to turn those on too, or use `wp easy-php debug off`.
+`wp easy-php remove-ini` removes this plugin's lines from `.user.ini` and `php.ini`.
+
+Run `wp help easy-php` for full details. Note that PHP on the command line uses its own `php.ini` and does not read `.user.ini`, so check the Status tab for the values your website actually uses.
 
 = What do the switches on the Debugging tab do? =
 
@@ -122,12 +135,12 @@ These switches directly control the debugging constants in your `wp-config.php` 
 
 == Screenshots ==
 
-1. General Settings — Configure PHP memory, upload limits, execution time, presets, and WordPress memory constants.
-2. Tools — Debugging toggles, log viewer, export/import settings, and reset options.
+1. General Settings — Live server summary, one-click presets, and PHP limits that show the value in use and whether your saved value has taken effect.
+2. Tools — WordPress debugging switches with plain-language explanations, plus the log viewer, export/import, and reset options.
 3. PHP Settings — Full table of all PHP directives with search and copy functionality.
 4. Extensions — View all loaded PHP extensions by category with missing extension alerts.
 5. Status — Live comparison of current vs. recommended PHP and WordPress memory values.
-6. About — Plugin information, privacy & data sharing controls, author details, and support links.
+6. About — Author profile with skills, services and a Hire me button, plus plugin details and privacy & data sharing controls.
 
 == Privacy Policy ==
 
@@ -167,6 +180,36 @@ Easy PHP Settings can optionally connect to **Plugin Tracker**, a service operat
 **Privacy Policy:** https://codereyes.com/privacy-policy/
 
 == Changelog ==
+
+= 1.1.9 =
+Released: November 6, 2026
+
+* Fixed: Saving settings no longer overwrites other content in .user.ini and php.ini (for example the Wordfence firewall's auto_prepend_file line). The plugin now writes only between "; BEGIN Easy PHP Settings" and "; END Easy PHP Settings" markers, and converts files written by older versions on the next save.
+* Changed: "Remove .ini Directives" (previously "Delete .ini Files") removes only this plugin's lines and deletes a file only if nothing else is left in it.
+* Changed: Redesigned admin screen. A new header shows PHP version, server API, whether .user.ini is read, and whether the site root is writable.
+* Changed: Each PHP and WordPress memory setting now shows the value in use, how it compares to the recommendation, and whether your saved value has taken effect (with manual snippets when it has not).
+* Changed: Presets are clickable cards that fill the form without leaving the page; changed fields are highlighted and a save bar counts unsaved changes and warns before you leave the page.
+* Changed: Debugging switches now explain what each constant does.
+* Changed: The About tab is laid out as a CV (profile, skills, services, selected work) with "Hire me" buttons that open an email.
+* Changed: Admin notices, including the data-sharing notice, appear above the plugin header.
+* Changed: The review request no longer pops up on every admin page after 7 days. It appears on the General tab only when the plugin's live check confirms your saved PHP settings are in use, and "Not now" waits 30 days.
+* Changed: The optional data-sharing notice is now compact: a one-line summary with Allow and No thanks buttons. What is sent, when, how to turn it off, and the Privacy Policy and Terms links are under "Learn more".
+* Fixed: Choosing a preset now updates the custom php.ini editor; before, the editor kept its old text and saved over the preset.
+* Fixed: The Status tab's "Changeable" column said "No" for upload_max_filesize, post_max_size and max_input_vars even on servers where the plugin sets them through .user.ini. It is now "How to change it": this plugin (.user.ini), .htaccess (Apache module), or host only.
+* Fixed: A JavaScript error on tabs without the custom php.ini editor.
+* Fixed: "Use recommended" is offered only when the current value is below the recommendation, so it never suggests lowering a limit.
+* Removed: The "Test Settings" button, which only showed a timed message; the per-setting "In use" check replaces it.
+* Added: Two Site Health checks: "PHP limits" (flags values below the recommendation) and "Saved PHP settings in use" (flags saved values the server ignores).
+* Added: The General tab re-checks the values PHP really uses when it loads, with a "Check again" button. Admin pages can show values the plugin set only for that page; the check reads them without that.
+* Added: An alert on the General tab when the server keeps ignoring saved settings, with a ready-to-send message for your host.
+* Added: Under the Media uploader, a note saying which PHP setting sets the upload limit, with a link to change it.
+* Changed: The debug log viewer groups repeated errors with a count, shows the newest first, filters by type (fatal, warning, notice, deprecated, database), and keeps the raw log one click away. It now reads the last 256 KB instead of 64 KB.
+* Fixed: Deleting the plugin now removes its lines from .user.ini and php.ini (other plugins' lines are kept).
+* Fixed: memory_limit = -1 and max_execution_time = 0 (no limit) are no longer shown as "Below recommended".
+* Added: `wp easy-php` WP-CLI command with `list`, `get`, `set`, `debug on|off`, and `remove-ini` subcommands. Run `wp help easy-php` for details.
+* Changed: Settings history records "wp-cli" as the user for changes made from the command line.
+* Fixed: If writing debugging constants to wp-config.php fails, the stored debugging settings are no longer changed to values that were never applied.
+* Dev: Added PHPUnit unit tests for the INI merge logic and the WP-CLI command (`composer install && composer test`).
 
 = 1.1.8 =
 Released: September 2, 2026
@@ -299,6 +342,9 @@ Released: March 5, 2026
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.1.9 =
+Safer .user.ini and php.ini writes that keep other plugins' lines (e.g. Wordfence), a redesigned settings screen that shows whether your values are really in use, Site Health checks and a WP-CLI command.
 
 = 1.1.8 =
 WordPress.org review fixes: scoped admin CSS, local About avatar, unfiltered review URL, Plugin Tracker terms/privacy links, and ZIP (not plaintext PHP) wp-config backups.
