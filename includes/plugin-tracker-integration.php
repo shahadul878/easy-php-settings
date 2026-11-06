@@ -6,7 +6,7 @@
  * administrator has explicitly opted in. No data is sent by default.
  *
  * @package PluginTrackerIntegration
- * @version 1.1.8
+ * @version 1.1.9
  * @author H M Shahadul Islam
  * @license GPL-2.0+
  */
@@ -740,7 +740,7 @@ add_action(
 			'easy-php-settings-tracker-widget',
 			plugins_url( 'css/tracker-widget.css', dirname( __DIR__ ) . '/class-easy-php-settings.php' ),
 			array( 'dashicons' ),
-			defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.8'
+			defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.9'
 		);
 	}
 );
@@ -954,7 +954,7 @@ function tracker_integration_enqueue_offer_notice_assets() {
 	}
 
 	$plugin_file = dirname( __DIR__ ) . '/class-easy-php-settings.php';
-	$version     = defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.8';
+	$version     = defined( 'PLUGIN_TRACKER_PLUGIN_VERSION' ) ? PLUGIN_TRACKER_PLUGIN_VERSION : '1.1.9';
 	$offer       = $active['offer'];
 	$offer_id    = isset( $offer['id'] ) ? (string) $offer['id'] : '';
 	$offer_link  = tracker_integration_safe_offer_link( isset( $offer['link'] ) ? $offer['link'] : '' );

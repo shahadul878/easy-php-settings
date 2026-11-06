@@ -4,7 +4,7 @@ Contributors: shahadul878,codereyes
 Tags: php settings, ini, performance, debug, wp-config
 Requires at least: 5.0
 Tested up to: 7.1
-Stable tag: 1.1.8
+Stable tag: 1.1.9
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -182,7 +182,7 @@ Easy PHP Settings can optionally connect to **Plugin Tracker**, a service operat
 == Changelog ==
 
 = 1.1.9 =
-Unreleased
+Released: November 6, 2026
 
 * Fixed: Saving settings no longer overwrites other content in .user.ini and php.ini (for example the Wordfence firewall's auto_prepend_file line). The plugin now writes only between "; BEGIN Easy PHP Settings" and "; END Easy PHP Settings" markers, and converts files written by older versions on the next save.
 * Changed: "Remove .ini Directives" (previously "Delete .ini Files") removes only this plugin's lines and deletes a file only if nothing else is left in it.
@@ -193,7 +193,7 @@ Unreleased
 * Changed: The About tab is laid out as a CV (profile, skills, services, selected work) with "Hire me" buttons that open an email.
 * Changed: Admin notices, including the data-sharing notice, appear above the plugin header.
 * Changed: The review request no longer pops up on every admin page after 7 days. It appears on the General tab only when the plugin's live check confirms your saved PHP settings are in use, and "Not now" waits 30 days.
-* Changed: The optional data-sharing notice is now compact. What is sent, the service, and the Privacy Policy and Terms links stay visible; timing details are one click away.
+* Changed: The optional data-sharing notice is now compact: a one-line summary with Allow and No thanks buttons. What is sent, when, how to turn it off, and the Privacy Policy and Terms links are under "Learn more".
 * Fixed: Choosing a preset now updates the custom php.ini editor; before, the editor kept its old text and saved over the preset.
 * Fixed: The Status tab's "Changeable" column said "No" for upload_max_filesize, post_max_size and max_input_vars even on servers where the plugin sets them through .user.ini. It is now "How to change it": this plugin (.user.ini), .htaccess (Apache module), or host only.
 * Fixed: A JavaScript error on tabs without the custom php.ini editor.
@@ -203,7 +203,7 @@ Unreleased
 * Added: The General tab re-checks the values PHP really uses when it loads, with a "Check again" button. Admin pages can show values the plugin set only for that page; the check reads them without that.
 * Added: An alert on the General tab when the server keeps ignoring saved settings, with a ready-to-send message for your host.
 * Added: Under the Media uploader, a note saying which PHP setting sets the upload limit, with a link to change it.
-* Changed: The debug log viewer groups repeated errors with a count, shows the newest first, filters by type (fatal, warning, notice, deprecated), and keeps the raw log one click away. It now reads the last 256 KB instead of 64 KB.
+* Changed: The debug log viewer groups repeated errors with a count, shows the newest first, filters by type (fatal, warning, notice, deprecated, database), and keeps the raw log one click away. It now reads the last 256 KB instead of 64 KB.
 * Fixed: Deleting the plugin now removes its lines from .user.ini and php.ini (other plugins' lines are kept).
 * Fixed: memory_limit = -1 and max_execution_time = 0 (no limit) are no longer shown as "Below recommended".
 * Added: `wp easy-php` WP-CLI command with `list`, `get`, `set`, `debug on|off`, and `remove-ini` subcommands. Run `wp help easy-php` for details.
@@ -342,6 +342,9 @@ Released: March 5, 2026
 * Initial release.
 
 == Upgrade Notice ==
+
+= 1.1.9 =
+Safer .user.ini and php.ini writes that keep other plugins' lines (e.g. Wordfence), a redesigned settings screen that shows whether your values are really in use, Site Health checks and a WP-CLI command.
 
 = 1.1.8 =
 WordPress.org review fixes: scoped admin CSS, local About avatar, unfiltered review URL, Plugin Tracker terms/privacy links, and ZIP (not plaintext PHP) wp-config backups.
