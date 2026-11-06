@@ -30,6 +30,7 @@ function easy_php_settings_uninstall() {
 		'easy_php_settings_reset_backup',
 		'easy_php_settings_history',
 		'easy_php_settings_error_log',
+		'easy_php_settings_last_saved',
 	);
 
 	foreach ( $easy_php_settings_option_keys as $easy_php_settings_key ) {
@@ -133,4 +134,22 @@ function easy_php_settings_uninstall() {
 	}
 }
 
+/**
+ * Remove this plugin's block from .user.ini and php.ini.
+ *
+ * Uses the same marker-aware removal as the "Remove directives" button, so
+ * lines added by other plugins stay. Failure (e.g. a read-only site root or
+ * a filesystem that needs FTP credentials) must not stop the uninstall.
+ *
+ * @return void
+ */
+function easy_php_settings_uninstall_ini_files() {
+	$easy_php_settings_dir = plugin_dir_path( __FILE__ ) . 'includes/';
+	require_once $easy_php_settings_dir . 'class-easy-error-handler.php';
+	require_once $easy_php_settings_dir . 'class-easyinifile.php';
+
+	EasyIniFile::remove_files();
+}
+
+easy_php_settings_uninstall_ini_files();
 easy_php_settings_uninstall();
